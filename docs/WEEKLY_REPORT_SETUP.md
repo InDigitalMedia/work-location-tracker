@@ -37,7 +37,7 @@ SendGrid is the recommended option because:
 3. **Verify your sender email:**
    - Settings → Sender Authentication
    - Verify Single Sender (for testing) OR set up Domain Authentication (for production)
-   - Use the email you want to send from (e.g., `shaz.ahmed@indigital.marketing`)
+   - Use the email you want to send from (e.g., `you@indigital.marketing`)
 
 4. **Add to Render Environment Variables:**
    ```
@@ -45,9 +45,11 @@ SendGrid is the recommended option because:
    SMTP_PORT=587
    SMTP_USER=apikey
    SMTP_PASSWORD=your-sendgrid-api-key-here
-   FROM_EMAIL=shaz.ahmed@indigital.marketing
-   REPORT_EMAILS=shaz.ahmed@indigital.marketing
+   FROM_EMAIL=you@indigital.marketing
+   REPORT_EMAILS=recipient1@indigital.marketing,recipient2@indigital.marketing
    ```
+
+   `FROM_EMAIL` and `REPORT_EMAILS` are required — the app raises an error on startup of the report job if either is unset, rather than falling back to any hardcoded address.
 
 **Alternative: Gmail or Office 365**
 
@@ -170,8 +172,8 @@ SMTP_SERVER=smtp.sendgrid.net
 SMTP_PORT=587
 SMTP_USER=apikey
 SMTP_PASSWORD=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-FROM_EMAIL=shaz.ahmed@indigital.marketing
-REPORT_EMAILS=shaz.ahmed@indigital.marketing
+FROM_EMAIL=you@indigital.marketing
+REPORT_EMAILS=recipient1@indigital.marketing,recipient2@indigital.marketing
 
 # Database (auto-set by Render)
 DATABASE_URL=postgresql://...

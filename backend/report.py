@@ -131,10 +131,13 @@ def send_email(
     smtp_port = smtp_port or int(os.getenv("SMTP_PORT", "587"))
     smtp_user = smtp_user or os.getenv("SMTP_USER", "apikey")  # SendGrid uses "apikey" as username
     smtp_password = smtp_password or os.getenv("SMTP_PASSWORD")  # SendGrid API key goes here
-    from_email = from_email or os.getenv("FROM_EMAIL", "shaz.ahmed@indigital.marketing")
-    
+    from_email = from_email or os.getenv("FROM_EMAIL")
+
     if not smtp_password:
         raise ValueError(f"SMTP_PASSWORD environment variable not set. Current SMTP_USER: {smtp_user}")
+
+    if not from_email:
+        raise ValueError("FROM_EMAIL environment variable not set")
     
     if not recipients:
         raise ValueError("At least one recipient email address is required")
@@ -201,13 +204,13 @@ def generate_and_send_weekly_report(
     Returns:
         dict with success status and details
     """
-    # Get recipients from env if not provided, default to shaz.ahmed@indigital.marketing
+    # Get recipients from env if not provided
     if not recipients:
-        emails_str = os.getenv("REPORT_EMAILS", "shaz.ahmed@indigital.marketing")
+        emails_str = os.getenv("REPORT_EMAILS", "")
         recipients = [e.strip() for e in emails_str.split(",") if e.strip()]
-    
+
     if not recipients:
-        recipients = ["shaz.ahmed@indigital.marketing"]  # Fallback default
+        raise ValueError("No recipients provided and REPORT_EMAILS environment variable not set")
     
     try:
         # Get previous week (Monday to Friday)
