@@ -1,0 +1,584 @@
+<title>Ownership Handover — Work Location Tracker</title>
+<style>
+  @font-face {
+    font-family: "sys-serif";
+    src: local("Iowan Old Style"), local("Palatino Linotype"), local("Palatino"), local("Georgia");
+  }
+
+  :root {
+    --paper: #f5f6f8;
+    --paper-raised: #ffffff;
+    --ink: #1b2430;
+    --ink-muted: #5b6472;
+    --ink-faint: #838d99;
+    --accent: #b3661f;
+    --accent-soft: #f1e2cf;
+    --warn: #a63a2c;
+    --warn-soft: #f6e2dd;
+    --confirm: #3f6b4c;
+    --confirm-soft: #e1ebe3;
+    --line: rgba(27, 36, 48, 0.13);
+    --code-bg: rgba(27, 36, 48, 0.055);
+    --shadow: 0 1px 2px rgba(27, 36, 48, 0.06);
+
+    --font-display: "sys-serif", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131720;
+      --paper-raised: #1a1f2b;
+      --ink: #e8eaed;
+      --ink-muted: #9ba3af;
+      --ink-faint: #6c7480;
+      --accent: #e0a15c;
+      --accent-soft: #3a2f1e;
+      --warn: #e2786a;
+      --warn-soft: #3a2420;
+      --confirm: #8bbf9a;
+      --confirm-soft: #223129;
+      --line: rgba(232, 234, 237, 0.13);
+      --code-bg: rgba(232, 234, 237, 0.07);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #131720;
+    --paper-raised: #1a1f2b;
+    --ink: #e8eaed;
+    --ink-muted: #9ba3af;
+    --ink-faint: #6c7480;
+    --accent: #e0a15c;
+    --accent-soft: #3a2f1e;
+    --warn: #e2786a;
+    --warn-soft: #3a2420;
+    --confirm: #8bbf9a;
+    --confirm-soft: #223129;
+    --line: rgba(232, 234, 237, 0.13);
+    --code-bg: rgba(232, 234, 237, 0.07);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
+
+  :root[data-theme="light"] {
+    --paper: #f5f6f8;
+    --paper-raised: #ffffff;
+    --ink: #1b2430;
+    --ink-muted: #5b6472;
+    --ink-faint: #838d99;
+    --accent: #b3661f;
+    --accent-soft: #f1e2cf;
+    --warn: #a63a2c;
+    --warn-soft: #f6e2dd;
+    --confirm: #3f6b4c;
+    --confirm-soft: #e1ebe3;
+    --line: rgba(27, 36, 48, 0.13);
+    --code-bg: rgba(27, 36, 48, 0.055);
+    --shadow: 0 1px 2px rgba(27, 36, 48, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  code, pre {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  code {
+    background: var(--code-bg);
+    padding: 0.12em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; }
+
+  /* ---------- progress bar ---------- */
+  .progress-shell {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 10px max(16px, calc((100vw - 720px) / 2));
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .progress-track {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--confirm);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .progress-fill { transition: none; }
+  }
+  .progress-label {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- page shell ---------- */
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 100px;
+  }
+
+  header.doc-head {
+    margin-bottom: 40px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: 2.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+  .doc-sub {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 20px;
+  }
+
+  .meta-strip {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 16px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    font-size: 14px;
+  }
+  .meta-strip dt {
+    color: var(--ink-faint);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .meta-strip dd { margin: 0; }
+
+  p.lede {
+    color: var(--ink-muted);
+    margin: 22px 0 0;
+  }
+
+  .claude-note {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .claude-note strong { color: var(--accent); }
+
+  /* ---------- steps ---------- */
+  section.step {
+    position: relative;
+    padding: 28px 0 0 44px;
+    border-top: 1px solid var(--line);
+    margin-top: 28px;
+  }
+  section.step:first-of-type { border-top: none; }
+
+  .step-badge {
+    position: absolute;
+    left: 0;
+    top: 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  section.step.complete .step-badge {
+    background: var(--confirm-soft);
+    border-color: var(--confirm);
+    color: var(--confirm);
+  }
+
+  .step h2 {
+    font-family: var(--font-display);
+    font-size: 1.36rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+
+  .step .ref {
+    color: var(--ink-faint);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .step p { margin: 10px 0; }
+
+  h3.sub {
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 22px 0 8px;
+  }
+
+  ul.checklist {
+    list-style: none;
+    margin: 10px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  ul.checklist ul.checklist {
+    margin: 4px 0 4px 8px;
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
+  }
+
+  ul.checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 6px;
+  }
+  ul.checklist li:has(input:checked) {
+    background: var(--confirm-soft);
+  }
+
+  ul.checklist input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    min-width: 17px;
+    margin-top: 2px;
+    border: 1.5px solid var(--ink-faint);
+    border-radius: 4px;
+    background: var(--paper-raised);
+    cursor: pointer;
+    position: relative;
+  }
+  ul.checklist input[type="checkbox"]:checked {
+    background: var(--confirm);
+    border-color: var(--confirm);
+  }
+  ul.checklist input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+  }
+
+  ul.checklist label {
+    cursor: pointer;
+    font-size: 15px;
+  }
+  ul.checklist li:has(input:checked) label {
+    color: var(--ink-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-faint);
+    text-decoration-thickness: 1px;
+  }
+
+  .callout {
+    margin: 16px 0;
+    padding: 13px 16px;
+    border-radius: 8px;
+    border-left: 3px solid var(--warn);
+    background: var(--warn-soft);
+    font-size: 14.5px;
+  }
+  .callout .tag {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--warn);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  footer.doc-foot {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+</style>
+
+<div class="progress-shell">
+  <span class="progress-label" id="progressLabel">0 / 0 done</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
+<main>
+  <header class="doc-head">
+    <div class="doc-sub">Runbook · Work Location Tracker</div>
+    <h1>Ownership Handover</h1>
+
+    <dl class="meta-strip">
+      <dt>For</dt><dd>Cam</dd>
+      <dt>From</dt><dd>Shaz (<code>shaz.ahmed@indigital.marketing</code>) — last day July 17, 2026</dd>
+      <dt>Deadline</dt><dd>Everything below complete before <strong>July 17, 2026</strong></dd>
+    </dl>
+
+    <p class="lede">This app currently depends entirely on Shaz's personal accounts — GitHub, Vercel, Render, and probably SendGrid. None of that transfers automatically when Shaz leaves: if this doc isn't completed first, the site and the weekly report email will silently break the day his accounts are deactivated. Cam is taking ownership on his own personal accounts — no company org exists for this yet.</p>
+
+    <div class="claude-note">
+      <strong>If you're running this with Claude Code:</strong> hand it this whole page. It can run the repo-side git commands and verification steps, but the actual account transfers on GitHub / Vercel / Render need a human clicking in each dashboard — Claude Code has no access to those accounts.
+    </div>
+  </header>
+
+  <section class="step" data-step="0">
+    <div class="step-badge">0</div>
+    <h2>Cam sends Shaz three things first</h2>
+    <p class="ref">Shaz needs these to send the invite requests.</p>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s0-0"><label for="s0-0">Your GitHub username</label></li>
+      <li><input type="checkbox" id="s0-1"><label for="s0-1">The email you want tied to Vercel and Render</label></li>
+      <li><input type="checkbox" id="s0-2"><label for="s0-2">Confirmation you can accept invites promptly — they usually expire after a few days</label></li>
+    </ul>
+  </section>
+
+  <section class="step" data-step="1">
+    <div class="step-badge">1</div>
+    <h2>GitHub repo transfer</h2>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s1-0"><label for="s1-0">Shaz: go to <code>github.com/shaz1409/work-location-tracker</code> → Settings → General → "Danger Zone" → <strong>Transfer ownership</strong> → enter Cam's GitHub username</label></li>
+      <li><input type="checkbox" id="s1-1"><label for="s1-1">Cam: accept the transfer email from GitHub</label></li>
+      <li><input type="checkbox" id="s1-2"><label for="s1-2">Cam: once transferred, the repo URL becomes <code>github.com/&lt;cam-username&gt;/work-location-tracker</code>. Update your local clone's remote:</label></li>
+    </ul>
+    <pre><code>git remote set-url origin https://github.com/&lt;cam-username&gt;/work-location-tracker.git
+git remote -v   # confirm it points to the new URL</code></pre>
+  </section>
+
+  <section class="step" data-step="2">
+    <div class="step-badge">2</div>
+    <h2>Vercel — frontend hosting</h2>
+    <p class="ref">Reference: <code>vercel.json</code></p>
+    <p>The frontend is a fully stateless static build — no database, no persisted state. Rather than transferring Shaz's existing Vercel project (which now requires picking a destination <strong>team</strong>, even for a one-person handover), Cam sets up a brand-new Vercel project on his own account. Nothing is lost doing it this way, and it skips the team/transfer flow entirely.</p>
+
+    <h3 class="sub">2a · Cam creates an account</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s2a-0"><label for="s2a-0">Go to <code>vercel.com/signup</code> and sign up — ideally via "Continue with GitHub," using the same GitHub account that now owns the repo. This makes importing the repo a one-click action.</label></li>
+    </ul>
+
+    <h3 class="sub">2b · Cam imports the project fresh</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s2b-0"><label for="s2b-0">Dashboard → <strong>Add New...</strong> → <strong>Project</strong></label></li>
+      <li><input type="checkbox" id="s2b-1"><label for="s2b-1">Import <code>work-location-tracker</code></label></li>
+      <li><input type="checkbox" id="s2b-2"><label for="s2b-2">Leave <strong>Root Directory</strong> as the repo root — do <strong>not</strong> set it to <code>frontend</code>. The root <code>package.json</code>'s build script already <code>cd</code>s into <code>frontend</code>, builds it, and copies the output to the repo root, and <code>vercel.json</code> expects that. Overriding Root Directory will break the build.</label></li>
+      <li><input type="checkbox" id="s2b-3"><label for="s2b-3">Framework preset, build command (<code>npm run build</code>), and output directory (<code>dist</code>) should auto-fill from <code>vercel.json</code> — leave as detected</label></li>
+      <li><input type="checkbox" id="s2b-4"><label for="s2b-4">Add environment variable <code>VITE_API_BASE</code> = the Render backend URL (e.g. <code>https://work-tracker-api.onrender.com</code>)</label></li>
+      <li><input type="checkbox" id="s2b-5"><label for="s2b-5">Click <strong>Deploy</strong>, wait ~2–3 minutes</label></li>
+      <li><input type="checkbox" id="s2b-6"><label for="s2b-6">Confirm the deployed URL loads the app and can submit/view entries</label></li>
+    </ul>
+
+    <h3 class="sub">2c · Custom domain — only if one is in use</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s2c-0"><label for="s2c-0">Shaz: check the old Vercel project's <strong>Settings → Domains</strong> for anything attached</label></li>
+      <li><input type="checkbox" id="s2c-1"><label for="s2c-1">If one exists: Cam adds it under his new project's <strong>Settings → Domains</strong>, then DNS gets repointed. Expect a few minutes of downtime while it propagates — plan for a low-traffic moment.</label></li>
+    </ul>
+  </section>
+
+  <section class="step" data-step="3">
+    <div class="step-badge">3</div>
+    <h2>Render — backend API + Postgres database</h2>
+    <p class="ref">Reference: <code>render.yaml</code>, <code>docs/deployment/HOSTING_GUIDE.md</code>, <code>docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md</code></p>
+
+    <div class="callout">
+      <span class="tag">Do not set this up fresh</span>
+      Unlike Vercel, the backend isn't stateless — <code>worktracker-db</code> holds every historical attendance entry. A brand-new Render account deploying <code>render.yaml</code> from scratch would provision an empty database and silently wipe the history. Cam is invited directly into Shaz's existing workspace as Admin instead, keeping the exact same database. There's no separate "transfer ownership" button to look for — Admin already has full functional control, and Shaz removing his own access in Step 6 is what finalizes it.
+    </div>
+
+    <h3 class="sub">3a · Cam creates an account</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s3a-0"><label for="s3a-0">Go to <code>render.com</code> and sign up (or log in) with the same email from Step 0</label></li>
+    </ul>
+
+    <h3 class="sub">3b · Shaz invites Cam to the workspace</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s3b-0"><label for="s3b-0">Log in to the Render dashboard</label></li>
+      <li><input type="checkbox" id="s3b-1"><label for="s3b-1">Open the workspace switcher (top-left), select the workspace this project is in</label></li>
+      <li><input type="checkbox" id="s3b-2"><label for="s3b-2">Go to <strong>Settings → People</strong> (sometimes labeled "Members" or "Team")</label></li>
+      <li><input type="checkbox" id="s3b-3"><label for="s3b-3">Click <strong>Invite Member</strong>, enter Cam's email, set his role to <strong>Admin</strong></label></li>
+    </ul>
+
+    <h3 class="sub">3c · Cam accepts</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s3c-0"><label for="s3c-0">Cam accepts the invite email and joins the workspace. No further action needed — Admin access is sufficient, and Step 6 is what completes the handover.</label></li>
+    </ul>
+
+    <h3 class="sub">3d · Cam verifies the service</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s3d-0"><label for="s3d-0">Open the <code>api</code> service → <strong>Settings → Build & Deploy</strong>, confirm the connected repo points to <code>github.com/&lt;cam-username&gt;/work-location-tracker</code> — reconnect if it still points to the old location</label></li>
+      <li><input type="checkbox" id="s3d-1"><label for="s3d-1">Open the <code>api</code> service → <strong>Environment</strong> tab, confirm <code>DATABASE_URL</code> is still auto-populated from <code>worktracker-db</code> (via the <code>fromDatabase</code> link in <code>render.yaml</code>)</label></li>
+    </ul>
+    <div class="callout">
+      <span class="tag">Hard rule</span>
+      Do not delete or recreate the <code>worktracker-db</code> database at any point in this process — it holds all historical entries. Ownership/workspace changes keep the data; recreating the database from scratch would wipe it.
+    </div>
+  </section>
+
+  <section class="step" data-step="4">
+    <div class="step-badge">4</div>
+    <h2>Email sending (SendGrid) &amp; Render env vars</h2>
+    <p class="ref">Reference: <code>docs/WEEKLY_REPORT_SETUP.md</code>, <code>backend/report.py</code></p>
+    <p>The weekly attendance report email is sent via SendGrid, configured through Render env vars. As of this handover there are <strong>no hardcoded fallback values</strong> — <code>backend/report.py</code> raises an error if these are missing, rather than silently defaulting to Shaz's email:</p>
+    <pre><code>SMTP_SERVER=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=&lt;SendGrid API key&gt;
+FROM_EMAIL=&lt;sender address, e.g. cam@indigital.marketing&gt;
+REPORT_EMAILS=&lt;comma-separated recipient list&gt;</code></pre>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s4-0"><label for="s4-0">Confirm whether the current SendGrid account belongs to Shaz personally. If so:</label>
+        <ul class="checklist">
+          <li><input type="checkbox" id="s4-0a"><label for="s4-0a">Cam creates his own SendGrid account (free tier: 100 emails/day) per <code>docs/WEEKLY_REPORT_SETUP.md</code></label></li>
+          <li><input type="checkbox" id="s4-0b"><label for="s4-0b">Generate a new "Mail Send" API key</label></li>
+          <li><input type="checkbox" id="s4-0c"><label for="s4-0c">Verify a sender email/domain in SendGrid</label></li>
+        </ul>
+      </li>
+      <li><input type="checkbox" id="s4-1"><label for="s4-1">Update <code>SMTP_PASSWORD</code> and <code>FROM_EMAIL</code> on Render with the new values</label></li>
+      <li><input type="checkbox" id="s4-2"><label for="s4-2">Update <code>REPORT_EMAILS</code> to the correct recipient list going forward</label></li>
+      <li><input type="checkbox" id="s4-3"><label for="s4-3">Manually trigger <code>/admin/send-weekly-report</code> (see <code>docs/WEEKLY_REPORT_SETUP.md</code>) once to confirm email sends end-to-end</label></li>
+    </ul>
+    <div class="callout">
+      <span class="tag">Known gap</span>
+      That endpoint is currently <strong>unprotected</strong> — anyone who finds the URL can trigger a send. Worth adding a shared-secret header check at some point; not blocking for handover.
+    </div>
+  </section>
+
+  <section class="step" data-step="5">
+    <div class="step-badge">5</div>
+    <h2>Verify everything end-to-end</h2>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s5-0"><label for="s5-0">Load the live frontend URL and submit a week's entries</label></li>
+      <li><input type="checkbox" id="s5-1"><label for="s5-1">Confirm the dashboard view shows the submission</label></li>
+      <li><input type="checkbox" id="s5-2"><label for="s5-2">Confirm the weekly report email arrives (Step 4's manual trigger)</label></li>
+      <li><input type="checkbox" id="s5-3"><label for="s5-3">Confirm Cam can push a commit and see it auto-deploy on both Vercel and Render</label></li>
+    </ul>
+  </section>
+
+  <section class="step" data-step="6">
+    <div class="step-badge">6</div>
+    <h2>Shaz removes himself</h2>
+    <p class="ref">Do this last, only after Cam confirms everything above.</p>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s6-0"><label for="s6-0">Remove Shaz from the GitHub repo's collaborators (should already be moot after transfer, but check)</label></li>
+      <li><input type="checkbox" id="s6-1"><label for="s6-1">Shaz deletes his own old Vercel project (Dashboard → project → <strong>Settings</strong> → scroll to <strong>Delete Project</strong>) — Cam's new project is fully independent, so this doesn't affect him</label></li>
+      <li><input type="checkbox" id="s6-2"><label for="s6-2">Remove Shaz from the Render workspace (<strong>Settings → People</strong> → remove) — this is the step that actually finalizes Render ownership</label></li>
+      <li><input type="checkbox" id="s6-3"><label for="s6-3">Confirm the old SendGrid API key (if it was Shaz's) is revoked once the new one is confirmed working</label></li>
+    </ul>
+  </section>
+
+  <footer class="doc-foot">
+    <strong>Not relevant — safe to ignore:</strong> <code>ecosystem.config.js</code> and <code>config/com.worktracker.*.plist</code> reference a local PM2/launchd setup on Shaz's own Mac. Confirmed dead — nothing running, logs stop Oct 31 2025. Production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.
+    <br><br>
+    Checkbox progress is saved in this browser only (<code>localStorage</code>), so it won't sync across devices.
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.checklist input[type="checkbox"]'));
+    var STORE_KEY = 'handover-progress-v1';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch (e) {}
+
+    function stepSections() {
+      return Array.prototype.slice.call(document.querySelectorAll('section.step'));
+    }
+
+    function updateStepComplete(section) {
+      var inputs = section.querySelectorAll('input[type="checkbox"]');
+      var all = inputs.length > 0 && Array.prototype.every.call(inputs, function (i) { return i.checked; });
+      section.classList.toggle('complete', all);
+    }
+
+    function updateProgress() {
+      var total = boxes.length;
+      var done = boxes.filter(function (b) { return b.checked; }).length;
+      document.getElementById('progressLabel').textContent = done + ' / ' + total + ' done';
+      document.getElementById('progressFill').style.width = (total ? (done / total * 100) : 0) + '%';
+      stepSections().forEach(updateStepComplete);
+    }
+
+    boxes.forEach(function (box) {
+      if (saved[box.id]) box.checked = true;
+      box.addEventListener('change', function () {
+        saved[box.id] = box.checked;
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch (e) {}
+        updateProgress();
+      });
+    });
+
+    updateProgress();
+  })();
+</script>

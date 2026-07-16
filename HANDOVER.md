@@ -1,5 +1,7 @@
 # Ownership Handover — Work Location Tracker
 
+> An interactive, checkable version of this doc is at [`HANDOVER.html`](HANDOVER.html) — open it in a browser (double-click it locally, or view it via GitHub's raw link) to tick items off as you go. This Markdown file is the source of truth; the HTML mirrors its content.
+
 **For: Cam**
 **From: Shaz (`shaz.ahmed@indigital.marketing`) — last day is July 17, 2026**
 **Deadline: complete everything below before July 17, 2026**
