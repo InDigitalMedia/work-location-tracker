@@ -29,31 +29,32 @@ Shaz needs these to send the transfer/invite requests:
 
 ## Step 2 — Vercel (frontend hosting)
 
-Reference: `vercel.json`, `docs/deployment/HOSTING_GUIDE.md`. (Vercel occasionally renames settings pages — if a label below doesn't match exactly, use the dashboard search bar for "transfer".)
+Reference: `vercel.json`. The frontend is a fully stateless static build (no database, no persisted state), so rather than transferring Shaz's existing Vercel project — which now requires picking a destination **team** even for a one-person handover — Cam just sets up a brand-new Vercel project on his own account. Nothing is lost by doing it this way, and it avoids the team/transfer flow entirely.
 
 ### 2a. Cam creates an account
 
-- [ ] Go to `vercel.com/signup` and sign up (or log in) with the email you gave Shaz in Step 0.
+- [ ] Go to `vercel.com/signup` and sign up (ideally via "Continue with GitHub," using the same GitHub account that now owns the repo after Step 1 — this makes importing the repo a one-click action).
 
-### 2b. Shaz starts the transfer
+### 2b. Cam imports the project fresh
 
-- [ ] Log in to the Vercel dashboard and open the `work-location-tracker` project.
-- [ ] Go to the project's **Settings** tab.
-- [ ] Scroll to the bottom to the **Transfer Project** section.
-- [ ] Click **Transfer**, and enter Cam's Vercel username or email as the destination.
-- [ ] Confirm by typing the project name when prompted.
-- [ ] Vercel emails Cam a transfer confirmation link.
+- [ ] Dashboard → **Add New...** → **Project**.
+- [ ] Import `work-location-tracker` (Vercel will list it once it has access to Cam's GitHub account/repos).
+- [ ] Leave **Root Directory** as the repo root — do **not** set it to `frontend`. The root `package.json`'s build script already `cd`s into `frontend`, builds it, and copies the output to the repo root, and `vercel.json` (at the repo root) expects that. Overriding Root Directory to `frontend` will break the build.
+- [ ] Framework preset, build command (`npm run build`), and output directory (`dist`) should all auto-fill from `vercel.json` — leave as detected.
+- [ ] Add environment variable `VITE_API_BASE` = the Render backend URL (e.g. `https://work-tracker-api.onrender.com` — same service from Step 3 below, unchanged since Render isn't being recreated).
+- [ ] Click **Deploy** and wait ~2-3 minutes.
+- [ ] Confirm the deployed URL loads the app and can submit/view entries.
 
-### 2c. Cam accepts and reconnects
+### 2c. Custom domain (only if one is currently in use)
 
-- [ ] Open the transfer email and click **Accept Transfer** while logged into your Vercel account.
-- [ ] Go to **Settings → Git** on the project and reconnect it to the repo's new location (`github.com/<cam-username>/work-location-tracker`) — the Git link typically breaks once GitHub ownership moves, since the integration was authorized under Shaz's GitHub account.
-- [ ] Go to **Settings → Environment Variables** and confirm the variable pointing at the backend (e.g. `VITE_API_BASE`) still has the correct Render URL.
-- [ ] Trigger a redeploy (Deployments tab → ⋯ on the latest deployment → **Redeploy**, or just push a commit) and confirm the site loads.
+- [ ] Shaz: check the old Vercel project's **Settings → Domains** for any custom domain attached.
+- [ ] If one exists: Cam adds the same domain under his new project's **Settings → Domains**, then DNS gets repointed to Cam's project/nameservers. Expect a few minutes of downtime while it propagates — plan this for a low-traffic moment.
 
 ## Step 3 — Render (backend API + Postgres database)
 
-Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md`. Render's ownership model is per-**workspace**, not per-service — the cleanest path is inviting Cam into Shaz's workspace as Admin, then transferring the whole workspace to him.
+Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md`. Render's ownership model is per-**workspace**, not per-service.
+
+**Important — do not have Cam create an independent Render setup from scratch.** Unlike Vercel, the backend isn't stateless: `worktracker-db` (a Postgres database) holds every historical attendance entry. A fresh Render account deploying `render.yaml` from scratch would provision a brand-new, empty database — silently wiping the history. So instead, Cam is invited directly into Shaz's existing workspace as Admin, keeping the exact same database. This is the whole handover mechanism here — there's no separate "transfer ownership" button to look for; an Admin already has full functional control, and Shaz removing his own account access in Step 6 is what finalizes it.
 
 ### 3a. Cam creates an account
 
@@ -66,10 +67,9 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 - [ ] Go to **Settings → People** (sometimes labeled "Members" or "Team").
 - [ ] Click **Invite Member**, enter Cam's email, and set his role to **Admin**.
 
-### 3c. Cam accepts, Shaz transfers ownership
+### 3c. Cam accepts
 
-- [ ] Cam accepts the invite email and joins the workspace.
-- [ ] Shaz goes to **Settings → General** (or wherever workspace ownership lives) and looks for a **Transfer Ownership** action to hand the workspace itself to Cam. If Render doesn't expose a direct "transfer workspace" button in your account, keep Cam as Admin and skip straight to Step 6 (Shaz removing himself) instead — an Admin has full control already, and removing Shaz effectively completes the handover.
+- [ ] Cam accepts the invite email and joins the workspace. No further action needed here — Admin access is sufficient, and Step 6 (Shaz removing himself) is what completes the handover.
 
 ### 3d. Cam verifies the service
 
@@ -112,8 +112,8 @@ REPORT_EMAILS=<comma-separated recipient list>
 ## Step 6 — Shaz removes himself (do this last, only after Cam confirms everything above)
 
 - [ ] Remove Shaz from the GitHub repo's collaborators (should already be moot after transfer, but check).
-- [ ] Remove Shaz from the Vercel project/team.
-- [ ] Remove Shaz from the Render workspace.
+- [ ] Shaz deletes his own old Vercel project (Dashboard → project → **Settings** → scroll to **Delete Project**) — Cam's new project is fully independent, so this doesn't affect him.
+- [ ] Remove Shaz from the Render workspace (**Settings → People** → remove) — this is the step that actually finalizes Render ownership, since Cam was made Admin rather than a formal transfer happening.
 - [ ] Confirm the old SendGrid API key (if it was Shaz's) is revoked once the new one is confirmed working.
 
 ## Not relevant — safe to ignore
