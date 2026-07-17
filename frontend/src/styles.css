@@ -720,14 +720,24 @@ body {
 }
 
 .user-card-confirm-no {
-  background: none;
-  border: 2px solid currentColor;
-  color: inherit;
+  background: #000000;
+  border: 2px solid #ffffff;
+  color: #ffffff;
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.user-card-confirm-no:hover {
+  background: #ffffff;
+  color: #000000;
+}
+
+.user-card-confirm-no:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .form-section h2 {
