@@ -641,18 +641,15 @@ body {
 }
 
 .user-card {
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 20px;
   background: #0a0a0a;
   border: 2px solid #ffffff;
   border-radius: 10px;
   color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .user-card:hover {
@@ -664,6 +661,73 @@ body {
 
 .user-card:active {
   transform: translateY(-1px);
+}
+
+.user-card-name {
+  flex: 1;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.user-card-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 6px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.user-card-delete:hover {
+  opacity: 1;
+}
+
+.user-card-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.user-card-confirm-yes {
+  background: #ff3b30;
+  border: 2px solid #ff3b30;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.user-card-confirm-yes:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.user-card-confirm-no {
+  background: none;
+  border: 2px solid currentColor;
+  color: inherit;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .form-section h2 {

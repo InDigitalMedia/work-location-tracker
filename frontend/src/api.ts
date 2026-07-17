@@ -64,6 +64,16 @@ export async function getUserEntriesForWeek(
   return result.entries || []
 }
 
+export async function deleteUserWeek(
+  userName: string,
+  weekStart: string
+): Promise<{ ok: boolean; message: string; count: number }> {
+  return apiCall<{ ok: boolean; message: string; count: number }>(
+    `/entries/user-week?user_name=${encodeURIComponent(userName)}&week_start=${weekStart}`,
+    { method: 'DELETE' }
+  )
+}
+
 export async function getUsersForWeek(
   weekStart: string
 ): Promise<{ users: string[] }> {

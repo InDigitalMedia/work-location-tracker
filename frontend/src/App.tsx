@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { WeekEntry, WorkLocation, SummaryRow, Entry, ExistingEntry } from './types'
-import { saveWeek, getWeekSummary, checkExistingEntries, getUserEntriesForWeek, getUsersForWeek, getAllUsers } from './api'
+import { saveWeek, getWeekSummary, checkExistingEntries, getUserEntriesForWeek, getUsersForWeek, getAllUsers, deleteUserWeek } from './api'
 // Load team and client lists from public at runtime (no imports from root)
 
 type ViewMode = 'fill' | 'dashboard' | 'edit'
@@ -163,6 +163,8 @@ function App() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [userSearchTerm, setUserSearchTerm] = useState('')
   const [editSearchTerm, setEditSearchTerm] = useState('')
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<string | null>(null)
+  const [deletingUser, setDeletingUser] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [showReminderBanner, setShowReminderBanner] = useState(false)
 
@@ -407,6 +409,21 @@ function App() {
     setIsEditMode(true)
     setViewMode('fill')
     await loadExistingEntries(selectedUser, formatDate(weekStart))
+  }
+
+  const handleDeleteUserWeek = async (user: string) => {
+    setDeletingUser(user)
+    try {
+      await deleteUserWeek(user, formatDate(weekStart))
+      setToast(`Deleted ${user}'s entries for this week`)
+      setTimeout(() => setToast(''), 3000)
+      setConfirmDeleteUser(null)
+      await loadUserList()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete entries')
+    } finally {
+      setDeletingUser(null)
+    }
   }
 
   const loadWeekSummary = async () => {
@@ -1161,15 +1178,50 @@ function App() {
                   u.toLowerCase().includes(editSearchTerm.toLowerCase())
                 )
                 .map((user, index) => (
-                <button
+                <div
                   key={index}
                   className={`user-card ${user === userName.trim() ? 'current-user' : ''}`}
-                  onClick={() => handleUserSelect(user)}
-                  type="button"
                 >
-                  {user}
-                  {user === userName.trim() && <span style={{ marginLeft: '6px', fontSize: '14px' }}>✓</span>}
-                </button>
+                  <button
+                    className="user-card-name"
+                    onClick={() => handleUserSelect(user)}
+                    type="button"
+                  >
+                    {user}
+                    {user === userName.trim() && <span style={{ marginLeft: '6px', fontSize: '14px' }}>✓</span>}
+                  </button>
+                  {confirmDeleteUser === user ? (
+                    <div className="user-card-confirm">
+                      <button
+                        type="button"
+                        className="user-card-confirm-yes"
+                        disabled={deletingUser === user}
+                        onClick={() => handleDeleteUserWeek(user)}
+                      >
+                        {deletingUser === user ? 'Deleting...' : 'Confirm delete?'}
+                      </button>
+                      <button
+                        type="button"
+                        className="user-card-confirm-no"
+                        disabled={deletingUser === user}
+                        onClick={() => setConfirmDeleteUser(null)}
+                        aria-label="Cancel delete"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="user-card-delete"
+                      onClick={() => setConfirmDeleteUser(user)}
+                      aria-label={`Delete ${user}'s entries for this week`}
+                      title={`Delete ${user}'s entries for this week`}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               ))}
               {userList.filter((u) => u.toLowerCase().includes(editSearchTerm.toLowerCase())).length === 0 && (
                 <div className="empty-state" style={{ gridColumn: '1 / -1' }}>

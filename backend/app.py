@@ -554,6 +554,49 @@ def get_entries(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@app.delete("/entries/user-week")
+def delete_user_week(
+    user_name: str = Query(..., description="User name whose entries should be deleted"),
+    week_start: str = Query(..., description="Week start date in YYYY-MM-DD format"),
+    session: Session = Depends(get_session),
+):
+    """Delete all of a user's entries for a given week (Monday-Friday)."""
+    logger.info(f"Delete week request for user: {user_name}, week starting: {week_start}")
+
+    try:
+        start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
+        end_date = start_date + timedelta(days=4)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD") from e
+
+    user_key = user_name.strip().lower()
+
+    try:
+        stmt = select(Entry).where(
+            Entry.user_key == user_key,
+            Entry.date >= week_start,
+            Entry.date <= end_date.strftime("%Y-%m-%d"),
+        )
+        entries = session.exec(stmt).all()
+
+        if not entries:
+            raise HTTPException(status_code=404, detail="No entries found for this user and week")
+
+        for entry in entries:
+            session.delete(entry)
+        session.commit()
+
+        logger.info(f"Deleted {len(entries)} entries for user_key {user_key}, week {week_start}")
+        return {"ok": True, "message": "Entries deleted successfully", "count": len(entries)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error deleting user week entries: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @app.delete("/entries/{entry_id}")
 def delete_entry(entry_id: int, session: Session = Depends(get_session)):
     """Delete a specific entry by ID."""
