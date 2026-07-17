@@ -1,14 +1,15 @@
 {
   "clients": [
     "Bey Medias",
+    "BoF",
     "Experian",
     "FSInsight",
     "FT",
-    "Future Publishing",
-    "Harmsworth Media",
+    "Future",
+    "Harmsworth",
     "Hearst Mags",
     "IAD",
-    "Indy",
+    "IC",
     "JWP",
     "Mail",
     "Monocle",
@@ -17,13 +18,11 @@
     "NEJM",
     "OQS",
     "PEI",
+    "POC",
+    "Sky",
     "Stowe",
     "The Independent",
-    "The Sun",
-    "Unherd + Spectator",
-    "Sky",
-    "BoF",
-    "IC",
-    "POC"
+    "The Sun"
   ]
 }
+
