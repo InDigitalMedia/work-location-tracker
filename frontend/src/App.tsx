@@ -1142,10 +1142,9 @@ function App() {
           {userName.trim() && userList.includes(userName.trim()) && (
             <div style={{ marginBottom: '16px' }}>
               <button
-                className="preset-btn"
+                className="preset-btn preset-btn-highlight"
                 onClick={() => handleUserSelect(userName.trim())}
                 type="button"
-                style={{ borderColor: '#00ff00', color: '#00ff00' }}
               >
                 ✏️ Edit my entry ({userName.trim()})
               </button>

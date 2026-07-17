@@ -632,6 +632,17 @@ body {
   transform: translateY(0);
 }
 
+.preset-btn-highlight {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.preset-btn-highlight:hover {
+  background: #00ff00;
+  color: #000000;
+  box-shadow: 0 0 7px rgba(0, 255, 0, 0.3);
+}
+
 .user-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
