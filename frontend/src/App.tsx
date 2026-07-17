@@ -1253,8 +1253,7 @@ function App() {
                     .filter(user =>
                       user.toLowerCase().includes(userSearchTerm.toLowerCase())
                     )
-                    .slice(0, 10)
-                    .map((user, index) => (
+                    .map((user, index, filtered) => (
                       <div
                         key={index}
                         onClick={() => {
@@ -1266,7 +1265,7 @@ function App() {
                         style={{
                           padding: '12px 16px',
                           cursor: 'pointer',
-                          borderBottom: index < 9 ? '1px solid #333' : 'none',
+                          borderBottom: index < filtered.length - 1 ? '1px solid #333' : 'none',
                           backgroundColor: user === userName ? '#2a2a2a' : 'transparent',
                           transition: 'background-color 0.2s',
                           whiteSpace: 'nowrap',

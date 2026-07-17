@@ -1,17 +1,42 @@
 {
   "teamMembers": [
-    
-  "Aidan Long", "Ama Opong", "Amy Frith",
-  "Andrew Protopapa", "Cameron Doherty", "Cara Burkitt", "Eleanor Payne", 
-  "Elena Gondova", "Faye Dineen", "Fern Goozee", "George Sutton", "Grace Robertson", 
-  "Hannah Walsh", "Harry Sexton", "Helena Field", "Iyanu Aluko", "Jashleen Kaur", 
-  "Karolina Zuba", "Kate Lindars", "Lola Thomas",
-  "Michael Pearson", "Mike West", "Rebecca Heller",
-  "Tapasya Sahu", "Tom Hobden", "Victoria MacLeod", "Vittoria Gianoli", "Elliot Russell", 
-  "Anna Masseroli", "Jonny Evans", "Oliver Norman", "Alex Lockett", "Shaz Ahmed",
-  "Beth Lewis", "Ciara McGrath", "Yunus Fouad", "Izzy Blake", "Yussuf Aamer"
-  
-]
-
+    "Aidan Long",
+    "Alex Lockett",
+    "Ama Opong",
+    "Amy Frith",
+    "Andrew Protopapa",
+    "Anna Masseroli",
+    "Beth Lewis",
+    "Cameron Doherty",
+    "Cara Burkitt",
+    "Ciara McGrath",
+    "Eleanor Payne",
+    "Elena Gondova",
+    "Elliot Russell",
+    "Faye Dineen",
+    "Fern Goozee",
+    "George Sutton",
+    "Grace Robertson",
+    "Hannah Walsh",
+    "Harry Sexton",
+    "Helena Field",
+    "Iyanu Aluko",
+    "Izzy Blake",
+    "Jashleen Kaur",
+    "Jonny Evans",
+    "Karolina Zuba",
+    "Kate Lindars",
+    "Lola Thomas",
+    "Michael Pearson",
+    "Mike West",
+    "Oliver Norman",
+    "Rebecca Heller",
+    "Shaz Ahmed",
+    "Tapasya Sahu",
+    "Tom Hobden",
+    "Victoria MacLeod",
+    "Vittoria Gianoli",
+    "Yunus Fouad",
+    "Yussuf Aamer"
+  ]
 }
-
