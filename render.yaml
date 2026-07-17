@@ -20,7 +20,3 @@ services:
         fromDatabase:
           name: worktracker-db
           property: connectionString
-
-  # Note: Render cron jobs must be set up manually via dashboard
-  # The API endpoint /admin/send-weekly-report is ready to be called
-  # Use external cron service or Render's cron job feature

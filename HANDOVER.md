@@ -6,7 +6,7 @@
 **From: Shaz (`shaz.ahmed@indigital.marketing`) — last day is July 17, 2026**
 **Deadline: complete everything below before July 17, 2026**
 
-This app currently depends entirely on Shaz's personal accounts (GitHub, Vercel, Render, and probably SendGrid). Nothing here transfers automatically when Shaz leaves — if this doc isn't completed first, the site and the weekly report email will silently break the day his accounts are deactivated. Cam is taking ownership on his own personal accounts (no company org exists for this yet).
+This app currently depends entirely on Shaz's personal accounts (GitHub, Vercel, and Render). Nothing here transfers automatically when Shaz leaves — if this doc isn't completed first, the site will silently break the day his accounts are deactivated. Cam is taking ownership on his own personal accounts (no company org exists for this yet).
 
 If Cam is using Claude Code, this doc is written so it can be handed the whole task — it can run the repo-side git commands and verification steps, but the actual account transfers on GitHub/Vercel/Render must be done by a human in each dashboard (Claude Code has no access to those accounts).
 
@@ -56,7 +56,7 @@ Reference: `vercel.json`. The frontend is a fully stateless static build (no dat
 
 Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md`. Render's ownership model is per-**workspace**, not per-service.
 
-**Important — do not have Cam create an independent Render setup from scratch.** Unlike Vercel, the backend isn't stateless: `worktracker-db` (a Postgres database) holds every historical attendance entry. A fresh Render account deploying `render.yaml` from scratch would provision a brand-new, empty database — silently wiping the history. So instead, Cam is invited directly into Shaz's existing workspace as Admin, keeping the exact same database. This is the whole handover mechanism here — there's no separate "transfer ownership" button to look for; an Admin already has full functional control, and Shaz removing his own account access in Step 6 is what finalizes it.
+**Important — do not have Cam create an independent Render setup from scratch.** Unlike Vercel, the backend isn't stateless: `worktracker-db` (a Postgres database) holds every historical attendance entry. A fresh Render account deploying `render.yaml` from scratch would provision a brand-new, empty database — silently wiping the history. So instead, Cam is invited directly into Shaz's existing workspace as Admin, keeping the exact same database. This is the whole handover mechanism here — there's no separate "transfer ownership" button to look for; an Admin already has full functional control, and Shaz removing his own account access in Step 5 is what finalizes it.
 
 ### 3a. Cam creates an account
 
@@ -71,7 +71,7 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 
 ### 3c. Cam accepts
 
-- [ ] Cam accepts the invite email and joins the workspace. No further action needed here — Admin access is sufficient, and Step 6 (Shaz removing himself) is what completes the handover.
+- [ ] Cam accepts the invite email and joins the workspace. No further action needed here — Admin access is sufficient, and Step 5 (Shaz removing himself) is what completes the handover.
 
 ### 3d. Cam verifies the service
 
@@ -79,44 +79,19 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 - [ ] Open the `api` service → **Environment** tab and confirm `DATABASE_URL` is still auto-populated from the `worktracker-db` database (via the `fromDatabase` link in `render.yaml`).
 - [ ] **Do not delete or recreate the `worktracker-db` database at any point in this process** — it holds all historical entries. Ownership/workspace changes keep the data; recreating the database from scratch would wipe it.
 
-## Step 4 — Email sending (SendGrid) and Render environment variables
-
-Reference: `docs/WEEKLY_REPORT_SETUP.md`, `backend/report.py`.
-
-The weekly attendance report email is sent via SendGrid, configured through Render env vars. As of this handover, there are **no hardcoded fallback values** — `backend/report.py` raises an error if these are missing, rather than silently defaulting to Shaz's email:
-
-```bash
-SMTP_SERVER=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USER=apikey
-SMTP_PASSWORD=<SendGrid API key>
-FROM_EMAIL=<sender address, e.g. cam@indigital.marketing>
-REPORT_EMAILS=<comma-separated recipient list>
-```
-
-- [ ] Confirm whether the current SendGrid account belongs to Shaz personally. If so:
-  - [ ] Cam creates his own SendGrid account (free tier: 100 emails/day) per `docs/WEEKLY_REPORT_SETUP.md`.
-  - [ ] Generate a new "Mail Send" API key.
-  - [ ] Verify a sender email/domain in SendGrid.
-- [ ] Update `SMTP_PASSWORD` and `FROM_EMAIL` on Render with the new values.
-- [ ] Update `REPORT_EMAILS` to the correct recipient list going forward.
-- [ ] Manually trigger `/admin/send-weekly-report` (see `docs/WEEKLY_REPORT_SETUP.md`) once to confirm email sends successfully end-to-end.
-
-⚠️ Note: that endpoint is currently **unprotected** — anyone who finds the URL can trigger a send. Worth adding a shared-secret header check at some point; not blocking for handover.
-
-## Step 5 — Verify everything works end-to-end
+## Step 4 — Verify everything works end-to-end
 
 - [ ] Load the live frontend URL and submit a week's entries.
 - [ ] Confirm the dashboard view shows the submission.
-- [ ] Confirm the weekly report email arrives (Step 4's manual trigger).
 - [ ] Confirm Cam can push a commit and see it auto-deploy on both Vercel and Render.
 
-## Step 6 — Shaz removes himself (do this last, only after Cam confirms everything above)
+## Step 5 — Shaz removes himself (do this last, only after Cam confirms everything above)
 
 - [ ] Remove Shaz from the GitHub repo's collaborators (should already be moot after transfer, but check).
 - [ ] Shaz deletes his own old Vercel project (Dashboard → project → **Settings** → scroll to **Delete Project**) — Cam's new project is fully independent, so this doesn't affect him.
 - [ ] Remove Shaz from the Render workspace (**Settings → People** → remove) — this is the step that actually finalizes Render ownership, since Cam was made Admin rather than a formal transfer happening.
-- [ ] Confirm the old SendGrid API key (if it was Shaz's) is revoked once the new one is confirmed working.
+
+> The weekly report email feature (SendGrid, `backend/report.py`, `/admin/send-weekly-report`) has been removed entirely — the site no longer sends any email, so there's nothing to transfer or re-key here.
 
 ## Not relevant — safe to ignore
 

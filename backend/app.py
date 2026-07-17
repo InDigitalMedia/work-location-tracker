@@ -9,7 +9,6 @@ from sqlalchemy import text
 
 from db import create_db_and_tables, get_session, engine
 from models import Entry
-from report import generate_and_send_weekly_report
 from schemas import (
     BulkUpsertRequest,
     BulkUpsertResponse,
@@ -824,51 +823,6 @@ def migrate_locations(session: Session = Depends(get_session)):
     except Exception as e:
         session.rollback()
         logger.error(f"Migration error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/admin/send-weekly-report")
-def send_weekly_report(
-    recipients: str = Query(None, description="Comma-separated email addresses (or use REPORT_EMAILS env var)"),
-    session: Session = Depends(get_session),
-):
-    """
-    Generate and send weekly office attendance report for the previous week.
-    
-    This endpoint is designed to be called by a cron job every Monday morning.
-    It calculates days each person was NOT working from home (excluding holidays)
-    for the previous Monday-Friday.
-    """
-    logger.info("Weekly report generation requested")
-    
-    try:
-        # Parse recipients if provided
-        email_list = None
-        if recipients:
-            email_list = [e.strip() for e in recipients.split(",") if e.strip()]
-        
-        result = generate_and_send_weekly_report(session, recipients=email_list)
-        
-        if result["success"]:
-            logger.info(
-                f"Weekly report sent successfully. Week: {result['week_start']} to {result['week_end']}, "
-                f"Recipients: {result['recipients']}"
-            )
-            return {
-                "ok": True,
-                "message": "Weekly report sent successfully",
-                "week_start": result["week_start"],
-                "week_end": result["week_end"],
-                "recipients": result["recipients"],
-                "users_reported": result["users_reported"],
-                "total_entries": result["total_entries"],
-            }
-        else:
-            logger.error(f"Failed to send weekly report: {result.get('error')}")
-            raise HTTPException(status_code=500, detail=result.get("error", "Failed to send report"))
-    
-    except Exception as e:
-        logger.error(f"Error sending weekly report: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
