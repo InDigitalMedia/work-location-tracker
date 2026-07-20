@@ -23,7 +23,7 @@ body {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 16px 20px;
 }
 
 .header {
@@ -83,7 +83,7 @@ body {
 }
 
 .toggle-btn {
-  padding: 10px 20px;
+  padding: 8px 20px;
   border: 2px solid #ffffff;
   background: #000000;
   color: #ffffff;
@@ -114,10 +114,10 @@ body {
 
 .week-selector {
   background: #0a0a0a;
-  padding: 20px;
+  padding: 14px;
   border-radius: 12px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   border: 1px solid #ffffff;
 }
 
@@ -147,7 +147,7 @@ body {
 
 .form-section {
   background: #0a0a0a;
-  padding: 20px;
+  padding: 16px;
   border-radius: 12px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
   margin-bottom: 14px;
@@ -155,7 +155,7 @@ body {
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .form-group label {
@@ -211,12 +211,12 @@ body {
 .week-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .week-table th,
 .week-table td {
-  padding: 12px;
+  padding: 8px;
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
@@ -238,7 +238,7 @@ body {
 
 .client-input {
   width: 100%;
-  padding: 8px;
+  padding: 6px 8px;
   border: 2px solid #ffffff;
   border-radius: 6px;
   font-size: 14px;
@@ -257,7 +257,7 @@ body {
   width: 100%;
   background: #22c55e;
   color: #000000;
-  padding: 14px 24px;
+  padding: 12px 24px;
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -266,7 +266,7 @@ body {
   letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
 .save-btn:hover {
@@ -299,6 +299,9 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
+  /* Keeps the day's date header clear of the sticky day-nav bar (~64px tall)
+     when jumped to via scrollIntoView or an anchor link */
+  scroll-margin-top: 80px;
 }
 
 .day-section.today {
@@ -612,7 +615,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   padding: 0;
   background: none;
   border: none;
@@ -627,7 +630,7 @@ body {
 }
 
 .preset-btn {
-  padding: 8px 16px;
+  padding: 6px 14px;
   border: 2px solid #ffffff;
   background: #000000;
   color: #ffffff;
@@ -1002,7 +1005,7 @@ select {
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  padding: 9px 34px 9px 12px;
+  padding: 7px 30px 7px 10px;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
