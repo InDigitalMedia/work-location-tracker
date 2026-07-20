@@ -1096,8 +1096,8 @@ function App() {
         <div className="header-content">
           <img src="/logo.jpg" alt="Logo" className="logo" />
           <div className="header-text">
-            <h1>Work Location Tracker</h1>
-            <p>Track where your team will work each day of the week</p>
+            <h1>In Office</h1>
+            <p>Track where your team is working this week</p>
           </div>
         </div>
       </div>
@@ -1332,8 +1332,9 @@ function App() {
             </div>
           )}
           <div className="form-group" style={{ position: 'relative' }}>
-            <label htmlFor="user-name">Your name:</label>
-            <div style={{ position: 'relative' }}>
+            <div className="name-field-row">
+              <label htmlFor="user-name">Your name:</label>
+              <div className="name-input-wrapper">
               <input
                 id="user-name"
                 type="text"
@@ -1418,6 +1419,7 @@ function App() {
                   )}
                 </div>
               )}
+              </div>
             </div>
             {existingEntriesCount > 0 && (
               <div className="update-warning">
