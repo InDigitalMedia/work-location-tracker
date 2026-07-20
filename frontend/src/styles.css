@@ -216,7 +216,7 @@ body {
 
 .week-table th,
 .week-table td {
-  padding: 6px;
+  padding: 9px 8px;
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
@@ -238,7 +238,7 @@ body {
 
 .client-input {
   width: 100%;
-  padding: 6px 8px;
+  padding: 8px;
   border: 2px solid #ffffff;
   border-radius: 6px;
   font-size: 14px;
@@ -995,7 +995,7 @@ select {
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  padding: 6px 28px 6px 9px;
+  padding: 8px 30px 8px 10px;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
