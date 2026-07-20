@@ -28,11 +28,21 @@ function formatWeekRangeLabel(weekStart: Date): string {
   return `${startStr} → ${endStr}`
 }
 
+function getOrdinalSuffix(day: number): string {
+  if (day >= 11 && day <= 13) return 'th'
+  switch (day % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
+}
+
 function formatFriendlyDate(dateStr: string): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const [year, month, day] = dateStr.split('-').map(Number)
   const yy = String(year).slice(-2)
-  return `${day} ${months[month - 1]} ${yy}`
+  return `${day}${getOrdinalSuffix(day)} ${months[month - 1]} ${yy}`
 }
 
 function formatWeekHeading(weekStart: Date): string {
