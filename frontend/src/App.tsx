@@ -177,7 +177,7 @@ function App() {
   // Overwrite confirmation + undo
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
   const [isOverwriteConfirmed, setIsOverwriteConfirmed] = useState(false)
-  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; client?: string; notes?: string}>>([])
+  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}>>([])
   const [showUndoBar, setShowUndoBar] = useState(false)
 
   // Runtime-loaded config
@@ -861,11 +861,11 @@ function App() {
       // Backup current entries from DB (for undo) if we are overwriting. Fetched fresh
       // here rather than reused from the existing-entries check, since that check is
       // debounced and could be stale relative to what's actually about to be overwritten.
-      let backup: Array<{date: string; location: string; client?: string; notes?: string}> = []
+      let backup: Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}> = []
       if (existingEntriesCount > 0) {
         try {
           const current = await getUserEntriesForWeek(userName.trim(), formatDate(weekStart))
-          backup = current.map(e => ({ date: e.date, location: e.location, client: e.client, notes: e.notes }))
+          backup = current.map(e => ({ date: e.date, location: e.location, time_period: e.time_period, client: e.client, notes: e.notes }))
           setBackupBeforeSave(backup)
         } catch {
           // if backup fails, proceed without undo
@@ -970,6 +970,7 @@ function App() {
         entries: backupBeforeSave.map(e => ({
           date: e.date,
           location: e.location as any,
+          time_period: e.time_period,
           client: e.client || undefined,
           notes: e.notes || undefined,
         })),
@@ -977,6 +978,9 @@ function App() {
       await saveWeek(request)
       setToast('Reverted previous entries')
       setTimeout(() => setToast(''), 3000)
+      if (viewMode === 'dashboard') {
+        await loadWeekSummary()
+      }
     } catch (e) {
       setError('Failed to undo changes')
     } finally {
@@ -1092,8 +1096,8 @@ function App() {
         <div className="header-content">
           <img src="/logo.jpg" alt="Logo" className="logo" />
           <div className="header-text">
-            <h1>Work Location Tracker</h1>
-            <p>Track where your team will work each day of the week</p>
+            <h1>In Office</h1>
+            <p>Track where your team is working this week</p>
           </div>
         </div>
       </div>
@@ -1190,7 +1194,7 @@ function App() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#000',
+              color: '#ffd600',
               cursor: 'pointer',
               fontSize: '18px',
               fontWeight: 700,
@@ -1216,7 +1220,7 @@ function App() {
                 onClick={() => handleUserSelect(userName.trim())}
                 type="button"
               >
-                ✏️ Edit my entry ({userName.trim()})
+                ✏️ Edit my entry (<span style={{ textTransform: 'none' }}>{userName.trim()}</span>)
               </button>
             </div>
           )}
@@ -1239,6 +1243,14 @@ function App() {
             <div className="empty-state">
               <h3>No entries found for this week</h3>
               <p>No one has submitted their work locations yet.</p>
+              <button
+                className="preset-btn preset-btn-highlight"
+                type="button"
+                onClick={() => { setViewMode('fill'); setIsEditMode(false) }}
+                style={{ marginTop: '12px' }}
+              >
+                Fill my week
+              </button>
             </div>
           ) : (
             <div className="user-list">
@@ -1328,8 +1340,9 @@ function App() {
             </div>
           )}
           <div className="form-group" style={{ position: 'relative' }}>
-            <label htmlFor="user-name">Your name:</label>
-            <div style={{ position: 'relative' }}>
+            <div className="name-field-row">
+              <label htmlFor="user-name">Your name:</label>
+              <div className="name-input-wrapper">
               <input
                 id="user-name"
                 type="text"
@@ -1414,6 +1427,7 @@ function App() {
                   )}
                 </div>
               )}
+              </div>
             </div>
             {existingEntriesCount > 0 && (
               <div className="update-warning">
@@ -1687,7 +1701,7 @@ function App() {
 
       {/* Undo bar after save */}
       {showUndoBar && (
-        <div className="toast" style={{ position: 'fixed', bottom: 20, left: 20, right: 'auto', background: '#000', color: '#00ff00', borderColor: '#00ff00' }}>
+        <div className="toast">
           Updated. <button className="preset-btn" onClick={handleUndo} type="button" style={{ marginLeft: 8 }}>Undo</button>
         </div>
       )}
@@ -1710,6 +1724,14 @@ function App() {
             <div className="empty-state">
               <h3>No entries found for this week</h3>
               <p>Team members haven't submitted their work locations yet.</p>
+              <button
+                className="preset-btn preset-btn-highlight"
+                type="button"
+                onClick={() => { setViewMode('fill'); setIsEditMode(false) }}
+                style={{ marginTop: '12px' }}
+              >
+                Fill my week
+              </button>
             </div>
           ) : (
             <>
