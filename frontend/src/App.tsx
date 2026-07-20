@@ -1677,8 +1677,8 @@ function App() {
           {/* Overwrite confirmation bar */}
           {showOverwriteConfirm && (
             <div style={{
-              marginTop: '12px',
-              padding: '12px 16px',
+              marginTop: '8px',
+              padding: '10px 14px',
               background: '#1a1a00',
               border: '2px solid #ffff00',
               borderRadius: '8px',
@@ -1686,7 +1686,8 @@ function App() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '12px'
+              gap: '12px',
+              fontSize: '14px'
             }}>
               <div style={{ fontWeight: 700 }}>
                 Update week for {userName.trim()}? This replaces previous entries.
