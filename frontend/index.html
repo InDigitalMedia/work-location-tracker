@@ -20,7 +20,7 @@
           var theme =
             stored === 'light' || stored === 'dark'
               ? stored
-              : window.matchMedia &&
+              : typeof window.matchMedia === 'function' &&
                 window.matchMedia('(prefers-color-scheme: dark)').matches
               ? 'dark'
               : 'light';
