@@ -1316,29 +1316,6 @@ function App() {
 
       {viewMode === 'fill' && (
         <div className="form-section">
-          {/* Overwrite confirmation bar */}
-          {showOverwriteConfirm && (
-            <div style={{
-              marginBottom: '12px',
-              padding: '12px 16px',
-              background: '#1a1a00',
-              border: '2px solid #ffff00',
-              borderRadius: '8px',
-              color: '#ffffcc',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px'
-            }}>
-              <div style={{ fontWeight: 700 }}>
-                Update week for {userName.trim()}? This replaces previous entries.
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="preset-btn" onClick={cancelOverwrite} type="button">Cancel</button>
-                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: '#00ff00' }}>Confirm update</button>
-              </div>
-            </div>
-          )}
           <div className="form-group" style={{ position: 'relative' }}>
             <div className="name-field-row">
               <label htmlFor="user-name">Your name:</label>
@@ -1696,6 +1673,31 @@ function App() {
           >
             {loading ? 'Saving...' : isEditMode ? 'Update my week' : 'Save my week'}
           </button>
+
+          {/* Overwrite confirmation bar */}
+          {showOverwriteConfirm && (
+            <div style={{
+              marginTop: '8px',
+              padding: '10px 14px',
+              background: '#1a1a00',
+              border: '2px solid #ffff00',
+              borderRadius: '8px',
+              color: '#ffffcc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              fontSize: '14px'
+            }}>
+              <div style={{ fontWeight: 700 }}>
+                Update week for {userName.trim()}? This replaces previous entries.
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="preset-btn" onClick={cancelOverwrite} type="button">Cancel</button>
+                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: '#00ff00' }}>Confirm update</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
