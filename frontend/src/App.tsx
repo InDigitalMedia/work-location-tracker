@@ -115,14 +115,15 @@ function groupEntriesByDateAndLocation(entries: SummaryRow[]): {
 }
 
 function getLocationAccentColor(location: string): string {
+  // Returns a CSS variable so the accent tracks the active theme (see styles.css).
   switch (location) {
-    case 'Neal Street': return '#39ff14'
-    case 'WFH': return '#00e5ff'
-    case 'Client Office': return '#ffd600'
-    case 'Holiday': return '#ff00ff'
-    case 'Working From Abroad': return '#bb86fc'
-    case 'Other': return '#ff7043'
-    default: return '#555'
+    case 'Neal Street': return 'var(--accent-office)'
+    case 'WFH': return 'var(--accent-wfh)'
+    case 'Client Office': return 'var(--accent-client)'
+    case 'Holiday': return 'var(--accent-holiday)'
+    case 'Working From Abroad': return 'var(--accent-abroad)'
+    case 'Other': return 'var(--accent-other)'
+    default: return 'var(--accent-default)'
   }
 }
 
@@ -148,8 +149,21 @@ function getLocationBadgeClass(location: string): string {
   }
 }
 
+type Theme = 'light' | 'dark'
+
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'light'
+  const stored = localStorage.getItem('workTrackerTheme')
+  if (stored === 'light' || stored === 'dark') return stored
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark'
+  }
+  return 'light'
+}
+
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('fill')
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [weekStart, setWeekStart] = useState<Date>(getMondayOfWeek(new Date()))
   const [userName, setUserName] = useState(() => {
     // Load from localStorage on mount
@@ -183,6 +197,12 @@ function App() {
   // Runtime-loaded config
   const [allUsers, setAllUsers] = useState<string[]>([])
   const [clientOptions, setClientOptions] = useState<string[]>([])
+
+  // Apply + persist the theme whenever it changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('workTrackerTheme', theme)
+  }, [theme])
 
   // Save user name to localStorage whenever it changes
   useEffect(() => {
@@ -1037,7 +1057,7 @@ function App() {
     onChange: (client: string) => void,
     onClientTypeChange: (clientType: string) => void
   ) => {
-    if (!location) return <span style={{ color: '#666', fontStyle: 'italic' }}>N/A</span>
+    if (!location) return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>N/A</span>
     if (location === 'Client Office') {
       return isCustom ? (
         <input
@@ -1056,11 +1076,11 @@ function App() {
             style={{
               width: '100%',
               padding: '8px',
-              border: '2px solid #ffffff',
-              borderRadius: '6px',
+              border: 'var(--border-input)',
+              borderRadius: '4px',
               fontSize: '14px',
-              background: '#000000',
-              color: '#ffffff',
+              background: 'var(--select-bg)',
+              color: 'var(--select-text)',
               fontWeight: '600',
               marginBottom: '4px',
             }}
@@ -1087,7 +1107,7 @@ function App() {
         />
       )
     }
-    return <span style={{ color: '#666', fontStyle: 'italic' }}>N/A</span>
+    return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>N/A</span>
   }
 
   return (
@@ -1099,6 +1119,16 @@ function App() {
             <h1>In Office</h1>
             <p>Track where your team is working this week</p>
           </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className="theme-toggle-icon" aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
         </div>
       </div>
 
@@ -1150,14 +1180,14 @@ function App() {
             onClick={openNativeDatePicker}
             style={{
               padding: '12px 16px',
-              border: '2px solid #ffffff',
-              background: '#000000',
-              color: '#ffffff',
-              borderRadius: 8,
+              border: 'var(--border-input)',
+              background: 'var(--btn-bg)',
+              color: 'var(--btn-text)',
+              borderRadius: 4,
               cursor: 'pointer',
               fontWeight: 700,
               letterSpacing: 1,
-              boxShadow: '0 0 15px rgba(255,255,255,0.2)'
+              boxShadow: 'none'
             }}
             aria-label="Open calendar to select week"
           >
@@ -1194,7 +1224,7 @@ function App() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#ffd600',
+              color: 'var(--warn-text)',
               cursor: 'pointer',
               fontSize: '18px',
               fontWeight: 700,
@@ -1350,14 +1380,14 @@ function App() {
                     top: '100%',
                     left: 0,
                     right: 0,
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
-                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: 'var(--border-input)',
+                    borderRadius: '4px',
                     marginTop: '4px',
                     maxHeight: '200px',
                     overflowY: 'auto',
                     zIndex: 1000,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    boxShadow: 'var(--shadow-hover)'
                   }}
                 >
             {allUsers
@@ -1376,15 +1406,15 @@ function App() {
                         style={{
                           padding: '12px 16px',
                           cursor: 'pointer',
-                          borderBottom: index < filtered.length - 1 ? '1px solid #333' : 'none',
-                          backgroundColor: user === userName ? '#2a2a2a' : 'transparent',
+                          borderBottom: index < filtered.length - 1 ? '1px solid var(--border-subtle-color)' : 'none',
+                          backgroundColor: user === userName ? 'var(--bg-muted)' : 'transparent',
                           transition: 'background-color 0.2s',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#2a2a2a'
+                          e.currentTarget.style.backgroundColor = 'var(--bg-muted)'
                         }}
                         onMouseLeave={(e) => {
                           if (user !== userName) {
@@ -1398,7 +1428,7 @@ function App() {
                   {allUsers.filter(user =>
                     user.toLowerCase().includes(userSearchTerm.toLowerCase())
                   ).length === 0 && (
-                    <div style={{ padding: '12px 16px', color: '#888', fontStyle: 'italic' }}>
+                    <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                       No matches found
                     </div>
                   )}
@@ -1435,7 +1465,7 @@ function App() {
               onClick={fillFromLastWeek}
               type="button"
               disabled={loading}
-              style={{ borderColor: '#aaa', color: '#ccc' }}
+              style={{ borderColor: 'var(--border-input-color)', color: 'var(--text-muted)' }}
             >
               <span style={{ fontSize: '16px', marginRight: '6px' }}>📋</span> Same As Last Week
             </button>
@@ -1496,7 +1526,7 @@ function App() {
                           className="preset-btn"
                           onClick={() => toggleSplit(index)}
                           type="button"
-                          style={{ fontSize: '11px', padding: '6px 10px', borderColor: '#00ff00', backgroundColor: '#003300', marginTop: '8px' }}
+                          style={{ fontSize: '11px', padding: '6px 10px', borderColor: 'var(--greenpill-border)', backgroundColor: 'var(--greenpill-bg)', color: 'var(--greenpill-text)', marginTop: '8px' }}
                         >
                           Unsplit
                         </button>
@@ -1556,7 +1586,7 @@ function App() {
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{formatFriendlyDate(entry.date)}</td>
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{entry.dayName}</td>
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#ffff00', fontSize: '12px' }}>Morning</div>
+                            <div style={{ fontWeight: '700', marginBottom: '4px', color: 'var(--text-heading)', fontSize: '12px' }}>Morning</div>
                             {renderLocationSelect(entry.morningLocation, (loc) => handleLocationChange(index, loc, 'morning'))}
                           </td>
                           <td>
@@ -1585,8 +1615,9 @@ function App() {
                               style={{
                                 fontSize: '11px',
                                 padding: '6px 10px',
-                                borderColor: '#00ff00',
-                                backgroundColor: '#003300',
+                                borderColor: 'var(--greenpill-border)',
+                                backgroundColor: 'var(--greenpill-bg)',
+                                color: 'var(--greenpill-text)',
                               }}
                             >
                               Unsplit
@@ -1595,7 +1626,7 @@ function App() {
                         </tr>
                         <tr className="split-afternoon-row">
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#ffff00', fontSize: '12px' }}>Afternoon</div>
+                            <div style={{ fontWeight: '700', marginBottom: '4px', color: 'var(--text-heading)', fontSize: '12px' }}>Afternoon</div>
                             {renderLocationSelect(entry.afternoonLocation, (loc) => handleLocationChange(index, loc, 'afternoon'))}
                           </td>
                           <td>
@@ -1679,10 +1710,10 @@ function App() {
             <div style={{
               marginTop: '8px',
               padding: '10px 14px',
-              background: '#1a1a00',
-              border: '2px solid #ffff00',
-              borderRadius: '8px',
-              color: '#ffffcc',
+              background: 'var(--warn-bg)',
+              border: '1px solid var(--warn-border)',
+              borderRadius: '4px',
+              color: 'var(--warn-text)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1694,7 +1725,7 @@ function App() {
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="preset-btn" onClick={cancelOverwrite} type="button">Cancel</button>
-                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: '#00ff00' }}>Confirm update</button>
+                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: 'var(--btn-highlight-color)', color: 'var(--btn-highlight-color)' }}>Confirm update</button>
               </div>
             </div>
           )}
@@ -1842,7 +1873,7 @@ function App() {
 
                               return (
                                   <div key={description} style={{ marginTop: '10px', paddingLeft: '20px' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '5px', color: '#ffff00' }}>
+                                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-heading)' }}>
                                     📊 {heading}
                                   </div>
                                   <div className="location-people">
@@ -1901,12 +1932,12 @@ function App() {
                       if (notEntered.length === 0) return null
 
                       return (
-                        <div className="location-group" style={{ marginTop: '16px', borderLeft: '3px solid #444' }}>
+                        <div className="location-group" style={{ marginTop: '16px', borderLeft: '3px solid var(--border-input-color)' }}>
                           <div className="location-group-title">
                             <span className="location-badge" style={{
-                              background: '#333',
-                              border: '1px solid #555',
-                              color: '#888'
+                              background: 'var(--bg-muted)',
+                              border: '1px solid var(--border-input-color)',
+                              color: 'var(--text-muted)'
                             }}>
                               Not Entered ({notEntered.length})
                             </span>
