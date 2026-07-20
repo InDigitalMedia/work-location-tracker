@@ -1194,7 +1194,7 @@ function App() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#000',
+              color: '#ffd600',
               cursor: 'pointer',
               fontSize: '18px',
               fontWeight: 700,
@@ -1243,6 +1243,14 @@ function App() {
             <div className="empty-state">
               <h3>No entries found for this week</h3>
               <p>No one has submitted their work locations yet.</p>
+              <button
+                className="preset-btn preset-btn-highlight"
+                type="button"
+                onClick={() => { setViewMode('fill'); setIsEditMode(false) }}
+                style={{ marginTop: '12px' }}
+              >
+                Fill my week
+              </button>
             </div>
           ) : (
             <div className="user-list">
@@ -1693,7 +1701,7 @@ function App() {
 
       {/* Undo bar after save */}
       {showUndoBar && (
-        <div className="toast" style={{ position: 'fixed', top: 'auto', bottom: 20, left: 20, right: 'auto', transform: 'none', background: '#000', color: '#00ff00', borderColor: '#00ff00' }}>
+        <div className="toast">
           Updated. <button className="preset-btn" onClick={handleUndo} type="button" style={{ marginLeft: 8 }}>Undo</button>
         </div>
       )}
@@ -1716,6 +1724,14 @@ function App() {
             <div className="empty-state">
               <h3>No entries found for this week</h3>
               <p>Team members haven't submitted their work locations yet.</p>
+              <button
+                className="preset-btn preset-btn-highlight"
+                type="button"
+                onClick={() => { setViewMode('fill'); setIsEditMode(false) }}
+                style={{ marginTop: '12px' }}
+              >
+                Fill my week
+              </button>
             </div>
           ) : (
             <>

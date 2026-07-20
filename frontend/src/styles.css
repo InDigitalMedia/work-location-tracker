@@ -35,7 +35,7 @@ body {
     0 8px 32px rgba(0, 0, 0, 0.8);
   margin-bottom: 14px;
   color: white;
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
 }
 
 .header-content {
@@ -388,14 +388,6 @@ body {
   border: 2px solid #ffff00;
 }
 
-.location-pto {
-  background: #ffffff;
-  color: #000000;
-  font-weight: 700;
-  box-shadow: 0 0 15px #ffffff;
-  border: 2px solid #ffffff;
-}
-
 .location-abroad {
   background: #bb86fc;
   color: #000000;
@@ -433,23 +425,20 @@ body {
 
 .toast {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 20px;
+  left: 20px;
   background: #000000;
   color: #00ff00;
-  padding: 24px 40px;
-  border-radius: 12px;
-  box-shadow: 
-    0 0 30px #00ff00,
-    0 0 60px rgba(0, 255, 0, 0.5);
+  padding: 14px 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
   z-index: 10000;
-  animation: popupFadeIn 0.3s ease-out;
-  border: 3px solid #00ff00;
+  animation: toastFadeIn 0.25s ease-out;
+  border: 2px solid #00ff00;
   font-weight: 700;
-  font-size: 24px;
-  text-align: center;
-  min-width: 200px;
+  font-size: 15px;
+  text-align: left;
+  min-width: 180px;
 }
 
 @keyframes slideIn {
@@ -463,13 +452,13 @@ body {
   }
 }
 
-@keyframes popupFadeIn {
+@keyframes toastFadeIn {
   from {
-    transform: translate(-50%, -50%) scale(0.8);
+    transform: translateY(10px);
     opacity: 0;
   }
   to {
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -787,13 +776,13 @@ body {
   gap: 12px;
   margin-bottom: 16px;
   padding: 14px 20px;
-  background: #fffbe6;
-  border: 2px solid #f5c400;
+  background: #1a1600;
+  border: 2px solid #ffd600;
   border-radius: 10px;
-  color: #000;
+  color: #ffe680;
   font-weight: 700;
   font-size: 15px;
-  box-shadow: 0 0 12px rgba(245, 196, 0, 0.4);
+  box-shadow: 0 0 15px rgba(255, 214, 0, 0.4);
 }
 
 /* Sticky day-of-week navigation in dashboard */
