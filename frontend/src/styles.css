@@ -185,8 +185,9 @@
   --split-tint: rgba(225, 171, 1, 0.06);
   --split-border: #e1ab01;
 
-  /* Select dropdown (arrow SVG is set per-theme on the `select` rule, since a
-     url() data URI inside a custom property trips esbuild's asset resolver) */
+  /* Select dropdown. The arrow SVG's fill color can't be a CSS variable (it
+     lives inside the data-URI string), so the whole background-image is set
+     per-theme on the `select` rule below rather than via a variable here. */
   --select-bg: #ffffff;
   --select-text: #101828;
   --select-border: 1px solid #d1d5dc;
@@ -1415,9 +1416,7 @@ select {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  /* Light-theme arrow (dark #364153); overridden per-theme below. Kept as a
-     literal url() rather than a custom property to avoid esbuild resolving the
-     data URI as a missing asset during build. */
+  /* Light-theme arrow (fill #364153); dark override is below. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23364153' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -1489,5 +1488,3 @@ select option {
   border-left: 2px solid var(--split-border);
   padding-left: 14px !important;
 }
-</content>
-</invoke>
