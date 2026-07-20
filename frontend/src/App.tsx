@@ -177,7 +177,7 @@ function App() {
   // Overwrite confirmation + undo
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
   const [isOverwriteConfirmed, setIsOverwriteConfirmed] = useState(false)
-  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; client?: string; notes?: string}>>([])
+  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}>>([])
   const [showUndoBar, setShowUndoBar] = useState(false)
 
   // Runtime-loaded config
@@ -861,11 +861,11 @@ function App() {
       // Backup current entries from DB (for undo) if we are overwriting. Fetched fresh
       // here rather than reused from the existing-entries check, since that check is
       // debounced and could be stale relative to what's actually about to be overwritten.
-      let backup: Array<{date: string; location: string; client?: string; notes?: string}> = []
+      let backup: Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}> = []
       if (existingEntriesCount > 0) {
         try {
           const current = await getUserEntriesForWeek(userName.trim(), formatDate(weekStart))
-          backup = current.map(e => ({ date: e.date, location: e.location, client: e.client, notes: e.notes }))
+          backup = current.map(e => ({ date: e.date, location: e.location, time_period: e.time_period, client: e.client, notes: e.notes }))
           setBackupBeforeSave(backup)
         } catch {
           // if backup fails, proceed without undo
@@ -970,6 +970,7 @@ function App() {
         entries: backupBeforeSave.map(e => ({
           date: e.date,
           location: e.location as any,
+          time_period: e.time_period,
           client: e.client || undefined,
           notes: e.notes || undefined,
         })),
@@ -977,6 +978,9 @@ function App() {
       await saveWeek(request)
       setToast('Reverted previous entries')
       setTimeout(() => setToast(''), 3000)
+      if (viewMode === 'dashboard') {
+        await loadWeekSummary()
+      }
     } catch (e) {
       setError('Failed to undo changes')
     } finally {
