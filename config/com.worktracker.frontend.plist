@@ -11,14 +11,19 @@
         <string>dev</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/frontend</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/frontend</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>VITE_API_BASE</key>
+        <string>http://localhost:8001</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/logs/frontend.log</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/logs/frontend.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/logs/frontend.error.log</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/logs/frontend.error.log</string>
 </dict>
 </plist>

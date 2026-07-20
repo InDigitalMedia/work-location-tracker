@@ -16,14 +16,14 @@
         <string>8001</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/backend</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/backend</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/logs/api.log</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/logs/api.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/shazahmed/Documents/python_repos/work_tracker/logs/api.error.log</string>
+    <string>/Users/camdoherty/Library/CloudStorage/OneDrive-InDigitalMarketing/Documents/VSC/work-location-tracker/logs/api.error.log</string>
 </dict>
 </plist>

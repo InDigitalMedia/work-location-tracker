@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,6 +80,29 @@ def check_time_period_column_exists(session: Session = None) -> bool:
     return _time_period_exists
 
 
+def normalize_time_period(value: str | None) -> str | None:
+    """Empty string (how the DB stores 'full day') normalizes to None for the API contract."""
+    return value or None
+
+
+def latest_user_names(entries) -> list[str]:
+    """Given a list of entries, return sorted unique display names, preferring the
+    most-recently-updated casing per user_key."""
+    latest_name: dict[str, str] = {}
+    latest_ts: dict = {}
+    for entry in entries:
+        key = entry.user_key
+        updated_at = getattr(entry, "updated_at", None)
+        if key not in latest_name:
+            latest_name[key] = entry.user_name
+            if updated_at:
+                latest_ts[key] = updated_at
+        elif updated_at and (key not in latest_ts or updated_at > latest_ts[key]):
+            latest_name[key] = entry.user_name
+            latest_ts[key] = updated_at
+    return sorted(set(latest_name.values()))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database on startup."""
@@ -91,7 +114,6 @@ async def lifespan(app: FastAPI):
         import os
         migrations_path = os.path.join(os.path.dirname(__file__), 'migrations')
         if os.path.exists(migrations_path):
-            from db import engine
             # Run migration 001: Add user_key constraint
             try:
                 from migrations.migrate_001_add_user_key_constraint import migrate as migrate_001
@@ -147,9 +169,6 @@ def bulk_upsert_entries(
     logger.info(f"Bulk upsert request for user_key: {user_key} (display: {request.user_name})")
 
     try:
-        from sqlalchemy import text
-        from datetime import UTC, datetime
-        
         # Use single transaction for atomicity
         count = 0
         
@@ -164,7 +183,6 @@ def bulk_upsert_entries(
                 is_postgres = "postgresql" in str(session.bind.url).lower()
             else:
                 # Fallback: check engine URL
-                from db import engine
                 is_postgres = "postgresql" in str(engine.url).lower()
         except Exception:
             pass  # Default to SQLite pattern
@@ -393,84 +411,36 @@ def get_week_summary(
         start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
         end_date = start_date + timedelta(days=4)  # Monday to Friday
 
-        # Query entries for the week using raw SQL to handle missing time_period column gracefully
-        from sqlalchemy import text
-        is_postgres = "postgresql" in str(session.bind.url).lower() if hasattr(session.bind, 'url') else False
-        
-        if is_postgres:
-            # Check if time_period column exists
-            try:
-                result = session.execute(text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'entry' AND column_name = 'time_period'
-                """))
-                time_period_exists = result.fetchone() is not None
-            except:
-                time_period_exists = False
-            
-            if time_period_exists:
-                # Use raw SQL to include time_period and normalize empty string to None
-                result = session.execute(text("""
-                    SELECT id, user_key, user_name, date, location, 
-                           NULLIF(time_period, '') as time_period,
-                           client, notes, created_at, updated_at
-                    FROM entry
-                    WHERE date >= :start_date AND date <= :end_date
-                    ORDER BY date, user_name, time_period
-                """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
-                rows = result.fetchall()
-                entries = [create_entry_from_row(row, include_time_period=True) for row in rows]
-            else:
-                # Use raw SQL to avoid time_period column (when it doesn't exist)
-                result = session.execute(text("""
-                    SELECT id, user_key, user_name, date, location, client, notes, created_at, updated_at
-                    FROM entry
-                    WHERE date >= :start_date AND date <= :end_date
-                    ORDER BY date, user_name
-                """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
-                rows = result.fetchall()
-                # Convert to Entry-like objects (time_period doesn't exist in DB)
-                entries = [create_entry_from_row(row, include_time_period=False) for row in rows]
+        # Query entries for the week. The SQL is identical on Postgres and SQLite,
+        # so we only need to branch on whether time_period exists (cached check).
+        time_period_exists = check_time_period_column_exists()
+
+        if time_period_exists:
+            result = session.execute(text("""
+                SELECT id, user_key, user_name, date, location,
+                       NULLIF(time_period, '') as time_period,
+                       client, notes, created_at, updated_at
+                FROM entry
+                WHERE date >= :start_date AND date <= :end_date
+                ORDER BY date, user_name, time_period
+            """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
+            entries = [create_entry_from_row(row, include_time_period=True) for row in result.fetchall()]
         else:
-            # SQLite - similar approach
-            try:
-                result = session.execute(text("PRAGMA table_info(entry)"))
-                columns = [row[1] for row in result.fetchall()]
-                time_period_exists = 'time_period' in columns
-            except:
-                time_period_exists = False
-            
-            if time_period_exists:
-                # Use raw SQL to include time_period and normalize empty string to None
-                result = session.execute(text("""
-                    SELECT id, user_key, user_name, date, location, 
-                           NULLIF(time_period, '') as time_period,
-                           client, notes, created_at, updated_at
-                    FROM entry
-                    WHERE date >= :start_date AND date <= :end_date
-                    ORDER BY date, user_name, time_period
-                """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
-                rows = result.fetchall()
-                entries = [create_entry_from_row(row, include_time_period=True) for row in rows]
-            else:
-                result = session.execute(text("""
-                    SELECT id, user_key, user_name, date, location, client, notes, created_at, updated_at
-                    FROM entry
-                    WHERE date >= :start_date AND date <= :end_date
-                    ORDER BY date, user_name
-                """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
-                rows = result.fetchall()
-                entries = [create_entry_from_row(row, include_time_period=False) for row in rows]
+            result = session.execute(text("""
+                SELECT id, user_key, user_name, date, location, client, notes, created_at, updated_at
+                FROM entry
+                WHERE date >= :start_date AND date <= :end_date
+                ORDER BY date, user_name
+            """), {"start_date": week_start, "end_date": end_date.strftime("%Y-%m-%d")})
+            entries = [create_entry_from_row(row, include_time_period=False) for row in result.fetchall()]
 
         # Convert to response format
-        # Normalize empty string back to None for API consistency
         summary_rows = [
             SummaryRow(
                 user_name=entry.user_name,
                 date=entry.date,
                 location=entry.location,
-                time_period=None if getattr(entry, 'time_period', None) == '' else getattr(entry, 'time_period', None),
+                time_period=normalize_time_period(getattr(entry, 'time_period', None)),
                 client=entry.client,
                 notes=entry.notes,
             )
@@ -540,7 +510,7 @@ def get_entries(
                 user_name=entry.user_name,
                 date=entry.date,
                 location=entry.location,
-                time_period=None if getattr(entry, 'time_period', None) == '' else getattr(entry, 'time_period', None),
+                time_period=normalize_time_period(getattr(entry, 'time_period', None)),
                 client=entry.client,
                 notes=entry.notes,
                 created_at=entry.created_at,
@@ -646,21 +616,7 @@ def get_all_users(
             rows = result.fetchall()
             entries = [create_entry_from_row(row) for row in rows]
 
-        # Group by user_key and get latest user_name (preserve display name with latest casing)
-        user_map = {}
-        for entry in entries:
-            if entry.user_key not in user_map:
-                user_map[entry.user_key] = entry.user_name
-            # Prefer more recent user_name (if updated_at exists)
-            elif entry.updated_at and (
-                not user_map.get(entry.user_key) or 
-                (isinstance(entry.updated_at, datetime) and 
-                 user_map.get(entry.user_key + "_ts", datetime.min) < entry.updated_at)
-            ):
-                user_map[entry.user_key] = entry.user_name
-        
-        # Return unique user names sorted alphabetically
-        users = sorted(list(set(user_map.values())))
+        users = latest_user_names(entries)
 
         logger.info(f"Found {len(users)} total users")
         return {"users": users}
@@ -705,27 +661,7 @@ def get_users_for_week(
             rows = result.fetchall()
             entries = [create_entry_from_row(row, include_time_period=False) for row in rows]
 
-        # Get unique user names grouped by user_key (normalized)
-        user_map = {}
-        for entry in entries:
-            if entry.user_key not in user_map:
-                user_map[entry.user_key] = entry.user_name
-                if hasattr(entry, 'updated_at') and entry.updated_at:
-                    user_map[entry.user_key + "_ts"] = entry.updated_at
-            # Prefer latest user_name if updated_at is more recent
-            elif hasattr(entry, 'updated_at') and entry.updated_at:
-                existing_ts = user_map.get(entry.user_key + "_ts")
-                if existing_ts and isinstance(existing_ts, type(entry.updated_at)):
-                    # Only compare if both are the same type
-                    if entry.updated_at > existing_ts:
-                        user_map[entry.user_key] = entry.user_name
-                        user_map[entry.user_key + "_ts"] = entry.updated_at
-                elif not existing_ts:
-                    # If no existing timestamp, use this one
-                    user_map[entry.user_key] = entry.user_name
-                    user_map[entry.user_key + "_ts"] = entry.updated_at
-        
-        users = sorted(list(set(user_map.values())))
+        users = latest_user_names(entries)
 
         logger.info(f"Found {len(users)} users for week {week_start}")
         return {"users": users}
@@ -776,7 +712,7 @@ def check_existing_entries(
                     {
                         "date": e.date,
                         "location": e.location,
-                        "time_period": None if getattr(e, 'time_period', None) == '' else getattr(e, 'time_period', None),
+                        "time_period": normalize_time_period(getattr(e, 'time_period', None)),
                         "client": e.client,
                         "notes": e.notes,
                     }
@@ -835,27 +771,24 @@ def migrate_locations(session: Session = Depends(get_session)):
     
     try:
         updated_count = 0
-        deleted_count = 0
-        
+
         for old_name, new_name in migration_map.items():
-            stmt = select(Entry).where(Entry.location == old_name)
-            entries = session.exec(stmt).all()
-            
-            for entry in entries:
-                entry.location = new_name
-                updated_count += 1
-            
-            session.commit()
-        
-        # Delete PTO entries since we removed that option
-        stmt = select(Entry).where(Entry.location == "PTO")
-        pto_entries = session.exec(stmt).all()
-        for entry in pto_entries:
-            session.delete(entry)
-            deleted_count += 1
-        
+            result = session.execute(
+                text("UPDATE entry SET location = :new_name WHERE location = :old_name"),
+                {"new_name": new_name, "old_name": old_name},
+            )
+            updated_count += result.rowcount or 0
+
         session.commit()
-        
+
+        # Delete PTO entries since we removed that option
+        result = session.execute(
+            text("DELETE FROM entry WHERE location = :old_name"), {"old_name": "PTO"}
+        )
+        deleted_count = result.rowcount or 0
+
+        session.commit()
+
         logger.info(f"Migration complete: {updated_count} updated, {deleted_count} PTO entries deleted")
         return {
             "ok": True, 
@@ -873,10 +806,10 @@ def migrate_locations(session: Session = Depends(get_session)):
 def debug_database(session: Session = Depends(get_session)):
     """Debug endpoint to check database contents and connection."""
     try:
-        # Check database type and connection
-        from db import DATABASE_URL, engine
+        from db import DATABASE_URL
+
         db_type = "PostgreSQL" if "postgresql://" in DATABASE_URL or "postgres://" in DATABASE_URL else "SQLite"
-        
+
         # Try to get database name/info (sanitized for security)
         db_info = "unknown"
         if "@" in DATABASE_URL:
@@ -884,68 +817,62 @@ def debug_database(session: Session = Depends(get_session)):
             db_info = DATABASE_URL.split("@")[-1].split("?")[0]
         elif "sqlite" in DATABASE_URL:
             db_info = DATABASE_URL.split("/")[-1]
-        
-        # Check if time_period column exists
-        time_period_exists = False
+
+        time_period_exists = check_time_period_column_exists()
+
+        # Full column list (name + type) — Postgres only, best-effort for debugging
         try:
-            from sqlalchemy import text, inspect
-            inspector = inspect(engine)
-            columns = [col['name'] for col in inspector.get_columns('entry')]
-            time_period_exists = 'time_period' in columns
-        except Exception as col_e:
-            logger.warning(f"Could not check columns: {col_e}")
-        
-        # Check table structure
-        try:
-            from sqlalchemy import text
             with engine.connect() as conn:
                 result = conn.execute(text("""
-                    SELECT column_name, data_type 
-                    FROM information_schema.columns 
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
                     WHERE table_name = 'entry'
                     ORDER BY ordinal_position
                 """))
                 table_columns = [{"name": row[0], "type": row[1]} for row in result.fetchall()]
         except Exception:
             table_columns = []
-        
-        # Get total entry count
-        time_period_exists_check = check_time_period_column_exists()
-        if time_period_exists_check:
-            all_entries = session.exec(select(Entry)).all()
-        else:
-            # Use raw SQL if column doesn't exist
-            result = session.execute(text("""
-                SELECT id, user_key, user_name, date, location, client, notes, created_at, updated_at
-                FROM entry
-            """))
-            rows = result.fetchall()
-            all_entries = [create_entry_from_row(row) for row in rows]
-        
-        total_count = len(all_entries)
-        
-        # Get sample entries (last 10)
-        recent_entries = all_entries[-10:] if all_entries else []
-        
-        # Get unique users
-        users = sorted(list(set([e.user_name for e in all_entries])))
-        
-        # Get date range
-        dates = [e.date for e in all_entries] if all_entries else []
-        min_date = min(dates) if dates else None
-        max_date = max(dates) if dates else None
-        
+
+        # Aggregate stats computed in SQL instead of loading the whole table into Python
+        total_count = session.execute(text("SELECT COUNT(*) FROM entry")).scalar() or 0
+
+        min_date, max_date = session.execute(text("SELECT MIN(date), MAX(date) FROM entry")).one()
+
+        users = [
+            row[0]
+            for row in session.execute(
+                text("SELECT DISTINCT user_name FROM entry ORDER BY user_name")
+            ).fetchall()
+        ]
+
+        time_period_select = "NULLIF(time_period, '') as time_period" if time_period_exists else "NULL as time_period"
+        recent_rows = session.execute(text(f"""
+            SELECT id, user_name, date, location, {time_period_select}, client
+            FROM entry
+            ORDER BY id DESC
+            LIMIT 10
+        """)).fetchall()
+        recent_entries = [
+            {
+                "id": row[0],
+                "user_name": row[1],
+                "date": row[2],
+                "location": row[3],
+                "time_period": row[4],
+                "client": row[5],
+            }
+            for row in recent_rows
+        ]
+
         # Test if we can write (just verify connection works)
         connection_ok = True
         try:
-            # Just verify the connection
-            from sqlalchemy import text
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
         except Exception as conn_e:
             connection_ok = False
             logger.error(f"Connection test failed: {str(conn_e)}")
-        
+
         # Check if we can query time_period (will fail if column doesn't exist)
         time_period_query_works = False
         if time_period_exists:
@@ -958,7 +885,7 @@ def debug_database(session: Session = Depends(get_session)):
                     time_period_query_works = True
             except Exception:
                 time_period_query_works = False
-        
+
         return {
             "database_type": db_type,
             "database_info": db_info,
@@ -972,17 +899,7 @@ def debug_database(session: Session = Depends(get_session)):
                 "earliest": min_date,
                 "latest": max_date
             },
-            "sample_entries": [
-                {
-                    "id": e.id,
-                    "user_name": e.user_name,
-                    "date": e.date,
-                    "location": e.location,
-                    "time_period": getattr(e, 'time_period', None),
-                    "client": e.client,
-                }
-                for e in recent_entries
-            ]
+            "sample_entries": recent_entries
         }
     except Exception as e:
         logger.error(f"Debug error: {str(e)}")

@@ -19,7 +19,7 @@ A beautiful web application to track where your team members are working (Office
 # Start backend
 cd backend
 pip install -r requirements.txt
-uvicorn app:app --reload --port 8002
+uvicorn app:app --reload --port 8001
 
 # Start frontend (in new terminal)
 cd frontend
@@ -73,7 +73,7 @@ A web application for tracking where team members will work each day of the week
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+uvicorn app:app --reload --host 0.0.0.0 --port 8001
 ```
 
 ### Frontend
@@ -90,8 +90,8 @@ docker-compose up --build
 ```
 
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
+- Backend API: http://localhost:8001
+- API Documentation: http://localhost:8001/docs
 
 ## Week Logic
 

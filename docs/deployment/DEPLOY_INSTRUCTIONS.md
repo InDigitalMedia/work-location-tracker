@@ -1,7 +1,7 @@
 # 🚀 Quick Deployment Guide for Work Location Tracker
 
 ## Your Repository
-- GitHub: https://github.com/shaz1409/work-location-tracker
+- GitHub: https://github.com/InDigitalMedia/work-location-tracker
 - You're ready to deploy!
 
 ---
@@ -11,7 +11,7 @@
 1. **Go to**: https://render.com
 2. **Sign up** (use GitHub)
 3. **Click "New" → "Web Service"**
-4. **Connect your GitHub account** and select `shaz1409/work-location-tracker`
+4. **Connect your GitHub account** and select `InDigitalMedia/work-location-tracker`
 5. **Configure**:
    - Name: `work-tracker-api`
    - Region: Choose closest to you
@@ -31,7 +31,7 @@
 1. **Go to**: https://vercel.com
 2. **Sign up** (use GitHub)
 3. **Click "Add New Project"**
-4. **Import** your repository `shaz1409/work-location-tracker`
+4. **Import** your repository `InDigitalMedia/work-location-tracker`
 5. **Configure**:
    - Root Directory: `frontend`
    - Framework Preset: Auto-detect (Vite)

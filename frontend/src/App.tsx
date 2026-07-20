@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { WeekEntry, WorkLocation, SummaryRow, Entry, ExistingEntry } from './types'
 import { saveWeek, getWeekSummary, checkExistingEntries, getUserEntriesForWeek, getUsersForWeek, getAllUsers, deleteUserWeek } from './api'
 // Load team and client lists from public at runtime (no imports from root)
@@ -126,6 +126,9 @@ function getLocationAccentColor(location: string): string {
   }
 }
 
+// Location order for consistent display
+const locationOrder = ['Neal Street', 'WFH', 'Client Office', 'Working From Abroad', 'Holiday', 'Other']
+
 function getLocationBadgeClass(location: string): string {
   switch (location.toLowerCase()) {
     case 'neal street':
@@ -236,21 +239,25 @@ function App() {
     }
   }, [viewMode, summaryEntries.length])
 
-  // Check for existing entries when user name or week changes
+  // Check for existing entries when user name or week changes (debounced so typing
+  // a name doesn't fire one request per keystroke)
   useEffect(() => {
-    const checkForExisting = async () => {
-      if (userName.trim()) {
-        try {
-          const result = await checkExistingEntries(userName.trim(), formatDate(weekStart))
-          setExistingEntriesCount(result.exists ? result.count : 0)
-        } catch (err) {
+    const timeoutId = setTimeout(() => {
+      const checkForExisting = async () => {
+        if (userName.trim()) {
+          try {
+            const result = await checkExistingEntries(userName.trim(), formatDate(weekStart))
+            setExistingEntriesCount(result.exists ? result.count : 0)
+          } catch (err) {
+            setExistingEntriesCount(0)
+          }
+        } else {
           setExistingEntriesCount(0)
         }
-      } else {
-        setExistingEntriesCount(0)
       }
-    }
-    checkForExisting()
+      checkForExisting()
+    }, 350)
+    return () => clearTimeout(timeoutId)
   }, [userName, weekStart])
 
   // Load user list when in edit mode
@@ -599,6 +606,49 @@ function App() {
     setWeekEntries(newEntries)
   }
 
+  // Shared between mobile card and desktop table layouts
+  const toggleSplit = (index: number) => {
+    const entry = weekEntries[index]
+    setSplitDays(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(entry.date)) {
+        newSet.delete(entry.date)
+        // Clear split fields when unsplitting
+        const newEntries = [...weekEntries]
+        newEntries[index] = {
+          ...newEntries[index],
+          morningLocation: undefined,
+          afternoonLocation: undefined,
+          morningClient: undefined,
+          afternoonClient: undefined,
+          morningNotes: undefined,
+          afternoonNotes: undefined,
+          morningIsCustomClient: undefined,
+          afternoonIsCustomClient: undefined,
+        }
+        setWeekEntries(newEntries)
+      } else {
+        newSet.add(entry.date)
+        // Initialize split fields when splitting
+        const newEntries = [...weekEntries]
+        const current = newEntries[index]
+        newEntries[index] = {
+          ...current,
+          morningLocation: current.location || 'Neal Street' as WorkLocation,
+          afternoonLocation: current.location || 'Neal Street' as WorkLocation,
+          morningClient: current.client || '',
+          afternoonClient: current.client || '',
+          morningNotes: current.notes || '',
+          afternoonNotes: current.notes || '',
+          morningIsCustomClient: current.isCustomClient || false,
+          afternoonIsCustomClient: current.isCustomClient || false,
+        }
+        setWeekEntries(newEntries)
+      }
+      return newSet
+    })
+  }
+
   const applyPreset = (presetType: 'all-office' | 'all-wfh') => {
     const newEntries = [...weekEntries]
     const location: WorkLocation = presetType === 'all-office' ? 'Neal Street' : 'WFH'
@@ -808,7 +858,9 @@ function App() {
       setLoading(true)
       setError('')
 
-      // Backup current entries from DB (for undo) if we are overwriting
+      // Backup current entries from DB (for undo) if we are overwriting. Fetched fresh
+      // here rather than reused from the existing-entries check, since that check is
+      // debounced and could be stale relative to what's actually about to be overwritten.
       let backup: Array<{date: string; location: string; client?: string; notes?: string}> = []
       if (existingEntriesCount > 0) {
         try {
@@ -933,10 +985,28 @@ function App() {
     }
   }
 
-  const groupedEntries = groupEntriesByDateAndLocation(summaryEntries)
+  // Derived dashboard data — recomputed only when the underlying entries change,
+  // not on every render (e.g. while typing on the "Fill my week" tab)
+  const { groupedEntries, locationGroupsByDate } = useMemo(() => {
+    const grouped = groupEntriesByDateAndLocation(summaryEntries)
+    const groupsByDate: { [date: string]: { [baseLoc: string]: { [key: string]: SummaryRow[] } } } = {}
+    for (const date of Object.keys(grouped)) {
+      const allLocationKeys = Object.keys(grouped[date] || {})
+      const locationGroups: { [baseLoc: string]: { [key: string]: SummaryRow[] } } = {}
+      for (const key of allLocationKeys) {
+        // Extract base location (remove "(Morning)" or "(Afternoon)" suffix)
+        const baseLoc = key.replace(/\s*\(Morning\)$/, '').replace(/\s*\(Afternoon\)$/, '')
+        if (!locationGroups[baseLoc]) {
+          locationGroups[baseLoc] = {}
+        }
+        locationGroups[baseLoc][key] = grouped[date][key] || []
+      }
+      groupsByDate[date] = locationGroups
+    }
+    return { groupedEntries: grouped, locationGroupsByDate: groupsByDate }
+  }, [summaryEntries])
 
-  // Define location order for consistent display
-  const locationOrder = ['Neal Street', 'WFH', 'Client Office', 'Working From Abroad', 'Holiday', 'Other']
+  const todayStr = formatDate(new Date())
 
   // Hoisted render helpers (shared between mobile cards and desktop table)
   const renderLocationSelect = (
@@ -1386,45 +1456,6 @@ function App() {
               {weekEntries.map((entry, index) => {
                 const isSplit = splitDays.has(entry.date)
 
-                const toggleSplit = () => {
-                  setSplitDays(prev => {
-                    const newSet = new Set(prev)
-                    if (newSet.has(entry.date)) {
-                      newSet.delete(entry.date)
-                      const newEntries = [...weekEntries]
-                      newEntries[index] = {
-                        ...newEntries[index],
-                        morningLocation: undefined,
-                        afternoonLocation: undefined,
-                        morningClient: undefined,
-                        afternoonClient: undefined,
-                        morningNotes: undefined,
-                        afternoonNotes: undefined,
-                        morningIsCustomClient: undefined,
-                        afternoonIsCustomClient: undefined,
-                      }
-                      setWeekEntries(newEntries)
-                    } else {
-                      newSet.add(entry.date)
-                      const newEntries = [...weekEntries]
-                      const current = newEntries[index]
-                      newEntries[index] = {
-                        ...current,
-                        morningLocation: current.location || 'Neal Street' as WorkLocation,
-                        afternoonLocation: current.location || 'Neal Street' as WorkLocation,
-                        morningClient: current.client || '',
-                        afternoonClient: current.client || '',
-                        morningNotes: current.notes || '',
-                        afternoonNotes: current.notes || '',
-                        morningIsCustomClient: current.isCustomClient || false,
-                        afternoonIsCustomClient: current.isCustomClient || false,
-                      }
-                      setWeekEntries(newEntries)
-                    }
-                    return newSet
-                  })
-                }
-
                 return (
                   <div key={entry.date} className="day-card">
                     <div className="day-card-header">
@@ -1472,7 +1503,7 @@ function App() {
                         </div>
                         <button
                           className="preset-btn"
-                          onClick={toggleSplit}
+                          onClick={() => toggleSplit(index)}
                           type="button"
                           style={{ fontSize: '11px', padding: '6px 10px', borderColor: '#00ff00', backgroundColor: '#003300', marginTop: '8px' }}
                         >
@@ -1498,7 +1529,7 @@ function App() {
                         />
                         <button
                           className="preset-btn"
-                          onClick={toggleSplit}
+                          onClick={() => toggleSplit(index)}
                           type="button"
                           style={{ fontSize: '11px', padding: '6px 10px', marginTop: '8px', borderWidth: '1px' }}
                         >
@@ -1526,47 +1557,6 @@ function App() {
               <tbody>
                 {weekEntries.map((entry, index) => {
                   const isSplit = splitDays.has(entry.date)
-
-                  const toggleSplit = () => {
-                    setSplitDays(prev => {
-                      const newSet = new Set(prev)
-                      if (newSet.has(entry.date)) {
-                        newSet.delete(entry.date)
-                        // Clear split fields when unsplitting
-                        const newEntries = [...weekEntries]
-                        newEntries[index] = {
-                          ...newEntries[index],
-                          morningLocation: undefined,
-                          afternoonLocation: undefined,
-                          morningClient: undefined,
-                          afternoonClient: undefined,
-                          morningNotes: undefined,
-                          afternoonNotes: undefined,
-                          morningIsCustomClient: undefined,
-                          afternoonIsCustomClient: undefined,
-                        }
-                        setWeekEntries(newEntries)
-                      } else {
-                        newSet.add(entry.date)
-                        // Initialize split fields when splitting
-                        const newEntries = [...weekEntries]
-                        const current = newEntries[index]
-                        newEntries[index] = {
-                          ...current,
-                          morningLocation: current.location || 'Neal Street' as WorkLocation,
-                          afternoonLocation: current.location || 'Neal Street' as WorkLocation,
-                          morningClient: current.client || '',
-                          afternoonClient: current.client || '',
-                          morningNotes: current.notes || '',
-                          afternoonNotes: current.notes || '',
-                          morningIsCustomClient: current.isCustomClient || false,
-                          afternoonIsCustomClient: current.isCustomClient || false,
-                        }
-                        setWeekEntries(newEntries)
-                      }
-                      return newSet
-                    })
-                  }
 
                   if (isSplit) {
                     return (
@@ -1599,7 +1589,7 @@ function App() {
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>
                             <button
                               className="preset-btn"
-                              onClick={toggleSplit}
+                              onClick={() => toggleSplit(index)}
                               type="button"
                               style={{
                                 fontSize: '11px',
@@ -1667,7 +1657,7 @@ function App() {
                       <td>
                         <button
                           className="preset-btn"
-                          onClick={toggleSplit}
+                          onClick={() => toggleSplit(index)}
                           type="button"
                           style={{
                             fontSize: '11px',
@@ -1728,7 +1718,6 @@ function App() {
                 {Object.keys(groupedEntries).sort().map((date) => {
                   const [y, m, d] = date.split('-').map(Number)
                   const dayShort = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' })
-                  const todayStr = new Date().toISOString().split('T')[0]
                   const isToday = date === todayStr
                   return (
                     <button
@@ -1747,8 +1736,6 @@ function App() {
                 .sort()
                 .map((date) => {
                   // Check if this date is today
-                  const today = new Date()
-                  const todayStr = today.toISOString().split('T')[0]
                   const isToday = date === todayStr
 
                   // Compute attendance stats for this day
@@ -1784,19 +1771,8 @@ function App() {
                     </div>
 
                     {(() => {
-                      // Get all location keys (including those with time_period suffixes)
-                      const allLocationKeys = Object.keys(groupedEntries[date] || {})
-
-                      // Group by base location (without time_period)
-                      const locationGroups: { [baseLoc: string]: { [key: string]: SummaryRow[] } } = {}
-                      for (const key of allLocationKeys) {
-                        // Extract base location (remove "(Morning)" or "(Afternoon)" suffix)
-                        const baseLoc = key.replace(/\s*\(Morning\)$/, '').replace(/\s*\(Afternoon\)$/, '')
-                        if (!locationGroups[baseLoc]) {
-                          locationGroups[baseLoc] = {}
-                        }
-                        locationGroups[baseLoc][key] = groupedEntries[date][key] || []
-                      }
+                      // Base-location grouping is precomputed in the dashboardData useMemo above
+                      const locationGroups = locationGroupsByDate[date] || {}
 
                       // Render each location group
                       return locationOrder.map((baseLocation) => {
