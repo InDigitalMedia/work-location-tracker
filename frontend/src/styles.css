@@ -374,29 +374,19 @@ body {
 }
 
 .location-abroad {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 12px;
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  background: #bb86fc;
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 0 15px #bb86fc;
+  border: 2px solid #bb86fc;
 }
 
 .location-other {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 12px;
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);
+  background: #ff7043;
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 0 15px #ff7043;
+  border: 2px solid #ff7043;
 }
 
 .location-off {
