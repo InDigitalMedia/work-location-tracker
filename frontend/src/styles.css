@@ -658,16 +658,16 @@ body {
 
 .user-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
   margin-top: 20px;
 }
 
 .user-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 8px 8px 20px;
+  gap: 6px;
+  padding: 4px 4px 4px 14px;
   background: #0a0a0a;
   border: 2px solid #ffffff;
   border-radius: 10px;
@@ -688,16 +688,15 @@ body {
 
 .user-card-name {
   flex: 1;
-  padding: 12px 0;
+  padding: 8px 0;
   background: none;
   border: none;
   color: inherit;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: normal;
 }
 
 .user-card-delete {
@@ -706,8 +705,8 @@ body {
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 16px;
-  padding: 6px;
+  font-size: 14px;
+  padding: 5px;
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
