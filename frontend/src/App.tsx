@@ -30,8 +30,9 @@ function formatWeekRangeLabel(weekStart: Date): string {
 
 function formatFriendlyDate(dateStr: string): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const [, month, day] = dateStr.split('-').map(Number)
-  return `${day} ${months[month - 1]}`
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const yy = String(year).slice(-2)
+  return `${day} ${months[month - 1]} ${yy}`
 }
 
 function formatWeekHeading(weekStart: Date): string {
