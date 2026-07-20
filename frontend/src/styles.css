@@ -185,8 +185,8 @@
   --split-tint: rgba(225, 171, 1, 0.06);
   --split-border: #e1ab01;
 
-  /* Select dropdown */
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23364153' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  /* Select dropdown (arrow SVG is set per-theme on the `select` rule, since a
+     url() data URI inside a custom property trips esbuild's asset resolver) */
   --select-bg: #ffffff;
   --select-text: #101828;
   --select-border: 1px solid #d1d5dc;
@@ -357,7 +357,6 @@
   --split-tint: rgba(184, 134, 11, 0.08);
   --split-border: #b8860b;
 
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
   --select-bg: #1a1a1a;
   --select-text: #ffffff;
   --select-border: 1px solid rgba(255, 255, 255, 0.3);
@@ -1416,10 +1415,17 @@ select {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  background-image: var(--select-arrow);
+  /* Light-theme arrow (dark #364153); overridden per-theme below. Kept as a
+     literal url() rather than a custom property to avoid esbuild resolving the
+     data URI as a missing asset during build. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23364153' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   transition: border-color 0.2s;
+}
+
+:root[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
 }
 
 select:focus {
