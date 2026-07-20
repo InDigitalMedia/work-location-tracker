@@ -46,8 +46,9 @@ pm2 logs work-tracker-frontend
 To make the services start automatically when your Mac boots up, run:
 
 ```bash
-sudo env PATH=$PATH:/opt/homebrew/Cellar/node/24.10.0/bin /opt/homebrew/lib/node_modules/pm2/bin/pm2 startup launchd -u shazahmed --hp /Users/shazahmed
+pm2 startup
 ```
+This prints a `sudo ...` command tailored to your user and Node install — copy and run the line it outputs.
 
 Then save the current configuration:
 ```bash
@@ -55,8 +56,7 @@ pm2 save
 ```
 
 ## 📁 Log Files
-All logs are saved to:
-- `/Users/shazahmed/Documents/python_repos/work_tracker/logs/`
+All logs are saved to the `logs/` directory at the project root.
 
 ## 🛑 Stopping Everything
 ```bash
@@ -74,9 +74,8 @@ pm2 logs
 # Restart everything
 pm2 restart all
 
-# Or use the startup script
-cd /Users/shazahmed/Documents/python_repos/work_tracker
-./start.sh
+# Or use the startup script (run from the project root)
+./scripts/start.sh
 ```
 
 ### If you need to update the code:
@@ -94,7 +93,7 @@ pm2 show work-tracker-frontend
 
 ## 🎯 Summary
 Your Work Location Tracker is now running continuously! It will:
-- ✅ Start automatically when you run `./start.sh`
+- ✅ Start automatically when you run `./scripts/start.sh`
 - ✅ Restart automatically if it crashes
 - ✅ Run in the background
 - ✅ Log all activity

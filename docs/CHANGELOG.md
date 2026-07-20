@@ -7,12 +7,14 @@
 - Backend now calculates week end as Friday instead of Sunday
 - Users can now only fill in weekdays
 
-### 2. **Update Logic** (Already Working!)
-The backend already handles updates perfectly:
-- When someone submits their week again, it **deletes old entries** for that date range
-- Then inserts the **new entries**
-- This allows people to change their mind and update their locations
-- Same person, same dates = update existing entries
+### 2. **Update Logic**
+> **Note:** this section originally described a delete-then-insert update strategy. That approach turned out to cause real data loss (see `docs/history/DATA_LOSS_ROOT_CAUSE_REPORT.md`) and was replaced — see the "Fixed - Data Loss Prevention" entry in the root [`CHANGELOG.md`](../CHANGELOG.md) for what's actually in place now.
+
+The backend performs atomic per-day upserts instead of delete-then-insert:
+- Each entry is written with `INSERT ... ON CONFLICT (user_key, date, time_period) DO UPDATE`
+- Submitting a partial week only touches those days — other days are left untouched
+- Same person, same date = updates the existing entry in place; no delete step involved
+- User identity is normalized via `user_key` (`lower(trim(user_name))`) so name-casing differences can't create duplicate or orphaned entries
 
 ### 3. **Improved Dashboard Display**
 - **Previous**: Showed each person as a separate card

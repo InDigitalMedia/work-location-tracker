@@ -12,7 +12,7 @@
 1. **Go to** https://vercel.com
 2. **Sign up/Sign in** (use GitHub)
 3. **Click "Add New Project"**
-4. **Import** your repository `shaz1409/work-location-tracker`
+4. **Import** your repository `InDigitalMedia/work-location-tracker`
 5. **Configure Settings**:
    - **Root Directory**: `frontend`
    - **Framework Preset**: Vite (auto-detects)

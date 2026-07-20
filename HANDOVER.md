@@ -8,6 +8,10 @@
 
 This app currently depends entirely on Shaz's personal accounts (GitHub, Vercel, and Render). Nothing here transfers automatically when Shaz leaves — if this doc isn't completed first, the site will silently break the day his accounts are deactivated. Cam is taking ownership on his own personal accounts (no company org exists for this yet).
 
+> **Status update (2026-07-20):** All three legs are confirmed done, via different mechanisms than originally planned below (kept for historical context — see the corrected notes under each step). GitHub: repo is at `github.com/InDigitalMedia/work-location-tracker` (an org). Vercel: live production frontend is now `https://in-office.vercel.app`. Render: backend migrated to a new account under `media@indigital.marketing`, live at `https://api-a8uz.onrender.com`, and `/summary/all-users` confirms historical entries (including Shaz's) survived the migration — not a fresh empty database.
+>
+> The *old* pairing — `work-location-tracker.vercel.app` calling the now-suspended `work-location-tracker.onrender.com` — is dead and orphaned from Shaz's original manual setup. That's expected now that the app has moved to the URLs above; it initially looked like a live outage until this was clarified. Cleanup of the old Vercel project / Render service is still open (see Step 5).
+
 If Cam is using Claude Code, this doc is written so it can be handed the whole task — it can run the repo-side git commands and verification steps, but the actual account transfers on GitHub/Vercel/Render must be done by a human in each dashboard (Claude Code has no access to those accounts).
 
 ## Step 0 — Cam: send Shaz these three things first
@@ -20,32 +24,24 @@ Shaz needs these to send the transfer/invite requests:
 
 ## Step 1 — GitHub repo transfer
 
-- [ ] Shaz: go to `github.com/shaz1409/work-location-tracker` → Settings → General → "Danger Zone" → **Transfer ownership** → enter Cam's GitHub username.
-- [ ] Cam: accept the transfer email from GitHub.
-- [ ] Cam: once transferred, the repo URL becomes `github.com/<cam-username>/work-location-tracker`. Update your local clone's remote:
-
-  ```bash
-  git remote set-url origin https://github.com/<cam-username>/work-location-tracker.git
-  git remote -v   # confirm it points to the new URL
-  ```
+- [x] Shaz: transferred the repo (destination ended up being the `InDigitalMedia` GitHub org rather than Cam's personal account).
+- [x] Cam: accepted the transfer.
+- [x] Cam: repo URL is now `github.com/InDigitalMedia/work-location-tracker`; local remote confirmed pointing there via `git remote -v`.
 
 ## Step 2 — Vercel (frontend hosting)
+
+> **Done (confirmed 2026-07-20):** live production frontend is `https://in-office.vercel.app` (HTTP 200), and its built JS bundle calls `https://api-a8uz.onrender.com` — matching the migrated Render backend below. The steps under 2a/2b were the original plan; check the actual Vercel dashboard if you need the specifics of how this project is configured (e.g. which account owns it), since that couldn't be verified from the repo alone.
 
 Reference: `vercel.json`. The frontend is a fully stateless static build (no database, no persisted state), so rather than transferring Shaz's existing Vercel project — which now requires picking a destination **team** even for a one-person handover — Cam just sets up a brand-new Vercel project on his own account. Nothing is lost by doing it this way, and it avoids the team/transfer flow entirely.
 
 ### 2a. Cam creates an account
 
-- [ ] Go to `vercel.com/signup` and sign up (ideally via "Continue with GitHub," using the same GitHub account that now owns the repo after Step 1 — this makes importing the repo a one-click action).
+- [x] Done — see status note above.
 
 ### 2b. Cam imports the project fresh
 
-- [ ] Dashboard → **Add New...** → **Project**.
-- [ ] Import `work-location-tracker` (Vercel will list it once it has access to Cam's GitHub account/repos).
-- [ ] Leave **Root Directory** as the repo root — do **not** set it to `frontend`. The root `package.json`'s build script already `cd`s into `frontend`, builds it, and copies the output to the repo root, and `vercel.json` (at the repo root) expects that. Overriding Root Directory to `frontend` will break the build.
-- [ ] Framework preset, build command (`npm run build`), and output directory (`dist`) should all auto-fill from `vercel.json` — leave as detected.
-- [ ] Add environment variable `VITE_API_BASE` = the Render backend URL (e.g. `https://work-tracker-api.onrender.com` — same service from Step 3 below, unchanged since Render isn't being recreated).
-- [ ] Click **Deploy** and wait ~2-3 minutes.
-- [ ] Confirm the deployed URL loads the app and can submit/view entries.
+- [x] Done — see status note above.
+- [ ] Confirm **Root Directory** is the repo root (not `frontend`) and `VITE_API_BASE` is set to `https://api-a8uz.onrender.com` — worth a quick dashboard check since these matter for future redeploys even though the current deploy is working.
 
 ### 2c. Custom domain (only if one is currently in use)
 
@@ -54,45 +50,31 @@ Reference: `vercel.json`. The frontend is a fully stateless static build (no dat
 
 ## Step 3 — Render (backend API + Postgres database)
 
+> **Done (confirmed 2026-07-20), via a different mechanism than planned below:** rather than inviting Cam as Admin into Shaz's existing workspace, the backend was migrated to a new Render account under `media@indigital.marketing`. Live at `https://api-a8uz.onrender.com` (HTTP 200) — `/summary/all-users` returns both `Cam Doherty` and `Shaz Ahmed`, confirming `worktracker-db`'s historical entries survived the migration rather than a fresh empty database being provisioned. The steps below were the original plan and are kept for reference; the actual how-it-was-migrated detail (dashboard transfer vs. dump/restore) isn't verifiable from the repo — worth double-checking `media@indigital.marketing`'s access/billing setup directly in the Render dashboard if that matters going forward.
+
 Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md`. Render's ownership model is per-**workspace**, not per-service.
 
-**Important — do not have Cam create an independent Render setup from scratch.** Unlike Vercel, the backend isn't stateless: `worktracker-db` (a Postgres database) holds every historical attendance entry. A fresh Render account deploying `render.yaml` from scratch would provision a brand-new, empty database — silently wiping the history. So instead, Cam is invited directly into Shaz's existing workspace as Admin, keeping the exact same database. This is the whole handover mechanism here — there's no separate "transfer ownership" button to look for; an Admin already has full functional control, and Shaz removing his own account access in Step 5 is what finalizes it.
+**Original plan (superseded — see status note above; kept for historical context only).** Unlike Vercel, the backend isn't stateless: `worktracker-db` (a Postgres database) holds every historical attendance entry. A fresh Render account deploying `render.yaml` from scratch would provision a brand-new, empty database — silently wiping the history. The original plan was for Cam to be invited directly into Shaz's existing workspace as Admin, keeping the exact same database, rather than creating an independent Render setup from scratch. In practice, the backend was migrated to a new account (`media@indigital.marketing`) instead — and the database came along intact, so the risk this plan was designed to avoid didn't materialize.
 
-### 3a. Cam creates an account
+### 3a-3d (original plan, superseded — see status note above)
 
-- [ ] Go to `render.com` and sign up (or log in) with the same email from Step 0.
-
-### 3b. Shaz invites Cam to the workspace
-
-- [ ] Log in to the Render dashboard.
-- [ ] Open the workspace switcher (top-left) and select the workspace this project is in.
-- [ ] Go to **Settings → People** (sometimes labeled "Members" or "Team").
-- [ ] Click **Invite Member**, enter Cam's email, and set his role to **Admin**.
-
-### 3c. Cam accepts
-
-- [ ] Cam accepts the invite email and joins the workspace. No further action needed here — Admin access is sufficient, and Step 5 (Shaz removing himself) is what completes the handover.
-
-### 3d. Cam verifies the service
-
-- [ ] Open the `api` service → **Settings → Build & Deploy** and confirm the connected GitHub repo points to `github.com/<cam-username>/work-location-tracker` — reconnect if it still points to the old location.
-- [ ] Open the `api` service → **Environment** tab and confirm `DATABASE_URL` is still auto-populated from the `worktracker-db` database (via the `fromDatabase` link in `render.yaml`).
-- [ ] **Do not delete or recreate the `worktracker-db` database at any point in this process** — it holds all historical entries. Ownership/workspace changes keep the data; recreating the database from scratch would wipe it.
+- [x] Render backend is live under the new account with data intact — verified via API, not via the dashboard steps originally planned here.
+- [ ] Worth a manual dashboard check: confirm `DATABASE_URL` on the `api-a8uz` service is still linked via `fromDatabase` to `worktracker-db` (per `render.yaml`) rather than a hardcoded string, so future redeploys don't drift.
 
 ## Step 4 — Verify everything works end-to-end
 
-- [ ] Load the live frontend URL and submit a week's entries.
-- [ ] Confirm the dashboard view shows the submission.
+- [x] Live frontend (`https://in-office.vercel.app`) loads and its backend (`https://api-a8uz.onrender.com`) responds with real data — verified via API on 2026-07-20.
+- [ ] Still worth doing by hand: actually submit a week's entries through the UI and confirm the dashboard reflects it (only API-level checks have been done so far, not a full click-through).
 - [ ] Confirm Cam can push a commit and see it auto-deploy on both Vercel and Render.
 
-## Step 5 — Shaz removes himself (do this last, only after Cam confirms everything above)
+## Step 5 — Old accounts/services cleanup (do this last, only after everything above is confirmed)
 
 - [ ] Remove Shaz from the GitHub repo's collaborators (should already be moot after transfer, but check).
-- [ ] Shaz deletes his own old Vercel project (Dashboard → project → **Settings** → scroll to **Delete Project**) — Cam's new project is fully independent, so this doesn't affect him.
-- [ ] Remove Shaz from the Render workspace (**Settings → People** → remove) — this is the step that actually finalizes Render ownership, since Cam was made Admin rather than a formal transfer happening.
+- [ ] **Old, now-orphaned pairing found 2026-07-20:** `work-location-tracker.vercel.app` (Shaz's original Vercel project) still calls `work-location-tracker.onrender.com` (Shaz's original Render service, currently suspended). Neither is the live app anymore — delete both once confirmed nothing still points at them (e.g. no bookmarked links, no custom domain — see Step 2's original 2c).
+- [ ] Remove Shaz from the Render workspace/account (**Settings → People**) if he still has any access to the `media@indigital.marketing` Render account or workspace.
 
 > The weekly report email feature (SendGrid, `backend/report.py`, `/admin/send-weekly-report`) has been removed entirely — the site no longer sends any email, so there's nothing to transfer or re-key here.
 
 ## Not relevant — safe to ignore
 
-`ecosystem.config.js` and `config/com.worktracker.*.plist` reference a local PM2/launchd setup on Shaz's own Mac. Confirmed dead (nothing running, logs stop Oct 31 2025) — production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.
+`ecosystem.config.js` and `config/com.worktracker.*.plist` reference a local PM2/launchd setup — originally hardcoded to Shaz's own Mac, since updated (2026-07-20) to Cam's machine path / made host-agnostic. Confirmed dead either way (nothing running, logs stop Oct 31 2025) — production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.

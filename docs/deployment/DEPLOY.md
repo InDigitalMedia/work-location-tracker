@@ -23,7 +23,7 @@ Your app is now ready to deploy! All configuration files are created:
 2. Push your code to GitHub:
 
 ```bash
-cd /Users/shazahmed/Documents/python_repos/work_tracker
+cd /path/to/work-location-tracker
 
 # Add the GitHub remote (replace YOUR_USERNAME with your GitHub username)
 git remote add origin https://github.com/YOUR_USERNAME/work-location-tracker.git
@@ -132,7 +132,7 @@ After making changes:
 
 ```bash
 # Make your changes
-cd /Users/shazahmed/Documents/python_repos/work_tracker
+cd /path/to/work-location-tracker
 
 # Commit changes
 git add .

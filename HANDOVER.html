@@ -391,6 +391,12 @@
     <p class="lede">This app currently depends entirely on Shaz's personal accounts — GitHub, Vercel, and Render. None of that transfers automatically when Shaz leaves: if this doc isn't completed first, the site will silently break the day his accounts are deactivated. Cam is taking ownership on his own personal accounts — no company org exists for this yet.</p>
 
     <div class="claude-note">
+      <strong>Status update (2026-07-20):</strong> All three legs are confirmed done, via different mechanisms than originally planned below (kept for historical context). GitHub: repo is at <code>github.com/InDigitalMedia/work-location-tracker</code> (an org). Vercel: live production frontend is now <code>https://in-office.vercel.app</code>. Render: backend migrated to a new account under <code>media@indigital.marketing</code>, live at <code>https://api-a8uz.onrender.com</code>, and <code>/summary/all-users</code> confirms historical entries (including Shaz's) survived the migration — not a fresh empty database.
+      <br><br>
+      The <em>old</em> pairing — <code>work-location-tracker.vercel.app</code> calling the now-suspended <code>work-location-tracker.onrender.com</code> — is dead and orphaned from Shaz's original manual setup. That's expected now that the app has moved to the URLs above; it initially looked like a live outage until this was clarified. Cleanup of the old Vercel project / Render service is still open (see Step 5).
+    </div>
+
+    <div class="claude-note">
       <strong>If you're running this with Claude Code:</strong> hand it this whole page. It can run the repo-side git commands and verification steps, but the actual account transfers on GitHub / Vercel / Render need a human clicking in each dashboard — Claude Code has no access to those accounts.
     </div>
   </header>
@@ -410,34 +416,38 @@
     <div class="step-badge">1</div>
     <h2>GitHub repo transfer</h2>
     <ul class="checklist">
-      <li><input type="checkbox" id="s1-0"><label for="s1-0">Shaz: go to <code>github.com/shaz1409/work-location-tracker</code> → Settings → General → "Danger Zone" → <strong>Transfer ownership</strong> → enter Cam's GitHub username</label></li>
-      <li><input type="checkbox" id="s1-1"><label for="s1-1">Cam: accept the transfer email from GitHub</label></li>
-      <li><input type="checkbox" id="s1-2"><label for="s1-2">Cam: once transferred, the repo URL becomes <code>github.com/&lt;cam-username&gt;/work-location-tracker</code>. Update your local clone's remote:</label></li>
+      <li><input type="checkbox" id="s1-0" checked><label for="s1-0">Shaz: transferred the repo (destination ended up being the <code>InDigitalMedia</code> GitHub org rather than Cam's personal account)</label></li>
+      <li><input type="checkbox" id="s1-1" checked><label for="s1-1">Cam: accepted the transfer</label></li>
+      <li><input type="checkbox" id="s1-2" checked><label for="s1-2">Cam: repo URL is now <code>github.com/InDigitalMedia/work-location-tracker</code>; local remote confirmed pointing there via <code>git remote -v</code></label></li>
     </ul>
-    <pre><code>git remote set-url origin https://github.com/&lt;cam-username&gt;/work-location-tracker.git
-git remote -v   # confirm it points to the new URL</code></pre>
   </section>
 
   <section class="step" data-step="2">
     <div class="step-badge">2</div>
     <h2>Vercel — frontend hosting</h2>
     <p class="ref">Reference: <code>vercel.json</code></p>
+
+    <div class="callout">
+      <span class="tag">Done (confirmed 2026-07-20)</span>
+      Live production frontend is <code>https://in-office.vercel.app</code> (HTTP 200), and its built JS bundle calls <code>https://api-a8uz.onrender.com</code> — matching the migrated Render backend in Step 3. The steps below were the original plan; check the actual Vercel dashboard for specifics (e.g. which account owns this project) since that couldn't be verified from the repo alone.
+    </div>
+
     <p>The frontend is a fully stateless static build — no database, no persisted state. Rather than transferring Shaz's existing Vercel project (which now requires picking a destination <strong>team</strong>, even for a one-person handover), Cam sets up a brand-new Vercel project on his own account. Nothing is lost doing it this way, and it skips the team/transfer flow entirely.</p>
 
     <h3 class="sub">2a · Cam creates an account</h3>
     <ul class="checklist">
-      <li><input type="checkbox" id="s2a-0"><label for="s2a-0">Go to <code>vercel.com/signup</code> and sign up — ideally via "Continue with GitHub," using the same GitHub account that now owns the repo. This makes importing the repo a one-click action.</label></li>
+      <li><input type="checkbox" id="s2a-0" checked><label for="s2a-0">Go to <code>vercel.com/signup</code> and sign up — ideally via "Continue with GitHub," using the same GitHub account that now owns the repo. This makes importing the repo a one-click action.</label></li>
     </ul>
 
     <h3 class="sub">2b · Cam imports the project fresh</h3>
     <ul class="checklist">
-      <li><input type="checkbox" id="s2b-0"><label for="s2b-0">Dashboard → <strong>Add New...</strong> → <strong>Project</strong></label></li>
-      <li><input type="checkbox" id="s2b-1"><label for="s2b-1">Import <code>work-location-tracker</code></label></li>
-      <li><input type="checkbox" id="s2b-2"><label for="s2b-2">Leave <strong>Root Directory</strong> as the repo root — do <strong>not</strong> set it to <code>frontend</code>. The root <code>package.json</code>'s build script already <code>cd</code>s into <code>frontend</code>, builds it, and copies the output to the repo root, and <code>vercel.json</code> expects that. Overriding Root Directory will break the build.</label></li>
-      <li><input type="checkbox" id="s2b-3"><label for="s2b-3">Framework preset, build command (<code>npm run build</code>), and output directory (<code>dist</code>) should auto-fill from <code>vercel.json</code> — leave as detected</label></li>
-      <li><input type="checkbox" id="s2b-4"><label for="s2b-4">Add environment variable <code>VITE_API_BASE</code> = the Render backend URL (e.g. <code>https://work-tracker-api.onrender.com</code>)</label></li>
-      <li><input type="checkbox" id="s2b-5"><label for="s2b-5">Click <strong>Deploy</strong>, wait ~2–3 minutes</label></li>
-      <li><input type="checkbox" id="s2b-6"><label for="s2b-6">Confirm the deployed URL loads the app and can submit/view entries</label></li>
+      <li><input type="checkbox" id="s2b-0" checked><label for="s2b-0">Dashboard → <strong>Add New...</strong> → <strong>Project</strong></label></li>
+      <li><input type="checkbox" id="s2b-1" checked><label for="s2b-1">Import <code>work-location-tracker</code></label></li>
+      <li><input type="checkbox" id="s2b-2"><label for="s2b-2">Confirm <strong>Root Directory</strong> is the repo root, not <code>frontend</code> — the root <code>package.json</code>'s build script already <code>cd</code>s into <code>frontend</code>, builds it, and copies the output to the repo root, and <code>vercel.json</code> expects that. Overriding Root Directory will break the build.</label></li>
+      <li><input type="checkbox" id="s2b-3" checked><label for="s2b-3">Framework preset, build command (<code>npm run build</code>), and output directory (<code>dist</code>) should auto-fill from <code>vercel.json</code> — leave as detected</label></li>
+      <li><input type="checkbox" id="s2b-4"><label for="s2b-4">Confirm environment variable <code>VITE_API_BASE</code> = <code>https://api-a8uz.onrender.com</code> (the real, current backend URL — not the <code>work-tracker-api.onrender.com</code> placeholder this step originally listed)</label></li>
+      <li><input type="checkbox" id="s2b-5" checked><label for="s2b-5">Click <strong>Deploy</strong>, wait ~2–3 minutes</label></li>
+      <li><input type="checkbox" id="s2b-6" checked><label for="s2b-6">Confirm the deployed URL loads the app and can submit/view entries</label></li>
     </ul>
 
     <h3 class="sub">2c · Custom domain — only if one is in use</h3>
@@ -453,32 +463,20 @@ git remote -v   # confirm it points to the new URL</code></pre>
     <p class="ref">Reference: <code>render.yaml</code>, <code>docs/deployment/HOSTING_GUIDE.md</code>, <code>docs/deployment/DEPLOY_WITH_PERSISTENT_DB.md</code></p>
 
     <div class="callout">
-      <span class="tag">Do not set this up fresh</span>
-      Unlike Vercel, the backend isn't stateless — <code>worktracker-db</code> holds every historical attendance entry. A brand-new Render account deploying <code>render.yaml</code> from scratch would provision an empty database and silently wipe the history. Cam is invited directly into Shaz's existing workspace as Admin instead, keeping the exact same database. There's no separate "transfer ownership" button to look for — Admin already has full functional control, and Shaz removing his own access in Step 5 is what finalizes it.
+      <span class="tag">Done (confirmed 2026-07-20), via a different mechanism than planned below</span>
+      Rather than inviting Cam as Admin into Shaz's existing workspace, the backend was migrated to a new Render account under <code>media@indigital.marketing</code>. Live at <code>https://api-a8uz.onrender.com</code> (HTTP 200) — <code>/summary/all-users</code> returns both <code>Cam Doherty</code> and <code>Shaz Ahmed</code>, confirming <code>worktracker-db</code>'s historical entries survived the migration rather than a fresh empty database being provisioned. The steps below were the original plan (kept for historical context); the actual how-it-was-migrated detail isn't verifiable from the repo.
     </div>
 
-    <h3 class="sub">3a · Cam creates an account</h3>
-    <ul class="checklist">
-      <li><input type="checkbox" id="s3a-0"><label for="s3a-0">Go to <code>render.com</code> and sign up (or log in) with the same email from Step 0</label></li>
-    </ul>
+    <p class="ref">Original plan (superseded — historical context only):</p>
+    <div class="callout">
+      <span class="tag">Do not set this up fresh</span>
+      Unlike Vercel, the backend isn't stateless — <code>worktracker-db</code> holds every historical attendance entry. A brand-new Render account deploying <code>render.yaml</code> from scratch would provision an empty database and silently wipe the history. The plan was for Cam to be invited directly into Shaz's existing workspace as Admin instead, keeping the exact same database, rather than creating an independent Render setup from scratch. In practice the backend was migrated to a new account instead — and the database came along intact, so the risk this plan was designed to avoid didn't materialize.
+    </div>
 
-    <h3 class="sub">3b · Shaz invites Cam to the workspace</h3>
+    <h3 class="sub">3a–3d (original plan, superseded)</h3>
     <ul class="checklist">
-      <li><input type="checkbox" id="s3b-0"><label for="s3b-0">Log in to the Render dashboard</label></li>
-      <li><input type="checkbox" id="s3b-1"><label for="s3b-1">Open the workspace switcher (top-left), select the workspace this project is in</label></li>
-      <li><input type="checkbox" id="s3b-2"><label for="s3b-2">Go to <strong>Settings → People</strong> (sometimes labeled "Members" or "Team")</label></li>
-      <li><input type="checkbox" id="s3b-3"><label for="s3b-3">Click <strong>Invite Member</strong>, enter Cam's email, set his role to <strong>Admin</strong></label></li>
-    </ul>
-
-    <h3 class="sub">3c · Cam accepts</h3>
-    <ul class="checklist">
-      <li><input type="checkbox" id="s3c-0"><label for="s3c-0">Cam accepts the invite email and joins the workspace. No further action needed — Admin access is sufficient, and Step 5 is what completes the handover.</label></li>
-    </ul>
-
-    <h3 class="sub">3d · Cam verifies the service</h3>
-    <ul class="checklist">
-      <li><input type="checkbox" id="s3d-0"><label for="s3d-0">Open the <code>api</code> service → <strong>Settings → Build & Deploy</strong>, confirm the connected repo points to <code>github.com/&lt;cam-username&gt;/work-location-tracker</code> — reconnect if it still points to the old location</label></li>
-      <li><input type="checkbox" id="s3d-1"><label for="s3d-1">Open the <code>api</code> service → <strong>Environment</strong> tab, confirm <code>DATABASE_URL</code> is still auto-populated from <code>worktracker-db</code> (via the <code>fromDatabase</code> link in <code>render.yaml</code>)</label></li>
+      <li><input type="checkbox" id="s3a-0" checked><label for="s3a-0">Render backend is live under the new account with data intact — verified via API, not via the dashboard steps originally planned here</label></li>
+      <li><input type="checkbox" id="s3b-0"><label for="s3b-0">Worth a manual dashboard check: confirm <code>DATABASE_URL</code> on the <code>api-a8uz</code> service is still linked via <code>fromDatabase</code> to <code>worktracker-db</code> (per <code>render.yaml</code>) rather than a hardcoded string, so future redeploys don't drift</label></li>
     </ul>
     <div class="callout">
       <span class="tag">Hard rule</span>
@@ -490,20 +488,20 @@ git remote -v   # confirm it points to the new URL</code></pre>
     <div class="step-badge">4</div>
     <h2>Verify everything end-to-end</h2>
     <ul class="checklist">
-      <li><input type="checkbox" id="s4-0"><label for="s4-0">Load the live frontend URL and submit a week's entries</label></li>
-      <li><input type="checkbox" id="s4-1"><label for="s4-1">Confirm the dashboard view shows the submission</label></li>
+      <li><input type="checkbox" id="s4-0" checked><label for="s4-0">Live frontend (<code>https://in-office.vercel.app</code>) loads and its backend (<code>https://api-a8uz.onrender.com</code>) responds with real data — verified via API on 2026-07-20</label></li>
+      <li><input type="checkbox" id="s4-1"><label for="s4-1">Still worth doing by hand: actually submit a week's entries through the UI and confirm the dashboard reflects it (only API-level checks have been done so far, not a full click-through)</label></li>
       <li><input type="checkbox" id="s4-2"><label for="s4-2">Confirm Cam can push a commit and see it auto-deploy on both Vercel and Render</label></li>
     </ul>
   </section>
 
   <section class="step" data-step="5">
     <div class="step-badge">5</div>
-    <h2>Shaz removes himself</h2>
-    <p class="ref">Do this last, only after Cam confirms everything above.</p>
+    <h2>Old accounts/services cleanup</h2>
+    <p class="ref">Do this last, only after everything above is confirmed.</p>
     <ul class="checklist">
       <li><input type="checkbox" id="s5-0"><label for="s5-0">Remove Shaz from the GitHub repo's collaborators (should already be moot after transfer, but check)</label></li>
-      <li><input type="checkbox" id="s5-1"><label for="s5-1">Shaz deletes his own old Vercel project (Dashboard → project → <strong>Settings</strong> → scroll to <strong>Delete Project</strong>) — Cam's new project is fully independent, so this doesn't affect him</label></li>
-      <li><input type="checkbox" id="s5-2"><label for="s5-2">Remove Shaz from the Render workspace (<strong>Settings → People</strong> → remove) — this is the step that actually finalizes Render ownership</label></li>
+      <li><input type="checkbox" id="s5-1"><label for="s5-1"><strong>Old, now-orphaned pairing found 2026-07-20:</strong> <code>work-location-tracker.vercel.app</code> (Shaz's original Vercel project) still calls <code>work-location-tracker.onrender.com</code> (Shaz's original Render service, currently suspended). Neither is the live app anymore — delete both once confirmed nothing still points at them (e.g. no bookmarked links, no custom domain — see Step 2's original 2c)</label></li>
+      <li><input type="checkbox" id="s5-2"><label for="s5-2">Remove Shaz from the Render workspace/account (<strong>Settings → People</strong>) if he still has any access to the <code>media@indigital.marketing</code> Render account or workspace</label></li>
     </ul>
     <div class="callout">
       <span class="tag">Removed</span>
@@ -512,7 +510,7 @@ git remote -v   # confirm it points to the new URL</code></pre>
   </section>
 
   <footer class="doc-foot">
-    <strong>Not relevant — safe to ignore:</strong> <code>ecosystem.config.js</code> and <code>config/com.worktracker.*.plist</code> reference a local PM2/launchd setup on Shaz's own Mac. Confirmed dead — nothing running, logs stop Oct 31 2025. Production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.
+    <strong>Not relevant — safe to ignore:</strong> <code>ecosystem.config.js</code> and <code>config/com.worktracker.*.plist</code> reference a local PM2/launchd setup — originally hardcoded to Shaz's own Mac, since updated (2026-07-20) to Cam's machine path / made host-agnostic. Confirmed dead either way — nothing running, logs stop Oct 31 2025. Production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.
     <br><br>
     Checkbox progress is saved in this browser only (<code>localStorage</code>), so it won't sync across devices.
   </footer>

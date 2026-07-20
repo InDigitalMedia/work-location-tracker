@@ -18,7 +18,7 @@
 
 2. Push your code:
 ```bash
-cd /Users/shazahmed/Documents/python_repos/work_tracker
+cd /path/to/work-location-tracker
 
 # Add your GitHub repo as remote
 git remote add origin https://github.com/YOUR_USERNAME/work-location-tracker.git
