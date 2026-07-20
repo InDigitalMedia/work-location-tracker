@@ -1219,9 +1219,8 @@ function App() {
                 className="preset-btn preset-btn-highlight"
                 onClick={() => handleUserSelect(userName.trim())}
                 type="button"
-                style={{ textTransform: 'none' }}
               >
-                ✏️ Edit my entry ({userName.trim()})
+                ✏️ Edit my entry (<span style={{ textTransform: 'none' }}>{userName.trim()}</span>)
               </button>
             </div>
           )}
