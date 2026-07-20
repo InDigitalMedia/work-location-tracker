@@ -116,13 +116,13 @@ function groupEntriesByDateAndLocation(entries: SummaryRow[]): {
 
 function getLocationAccentColor(location: string): string {
   switch (location) {
-    case 'Neal Street': return '#39ff14'
-    case 'WFH': return '#00e5ff'
-    case 'Client Office': return '#ffd600'
-    case 'Holiday': return '#ff00ff'
-    case 'Working From Abroad': return '#bb86fc'
-    case 'Other': return '#ff7043'
-    default: return '#555'
+    case 'Neal Street': return '#44cb55'
+    case 'WFH': return '#00adcd'
+    case 'Client Office': return '#e1ab01'
+    case 'Holiday': return '#c62877'
+    case 'Working From Abroad': return '#262453'
+    case 'Other': return '#6a7282'
+    default: return '#99a1af'
   }
 }
 
@@ -1037,7 +1037,7 @@ function App() {
     onChange: (client: string) => void,
     onClientTypeChange: (clientType: string) => void
   ) => {
-    if (!location) return <span style={{ color: '#666', fontStyle: 'italic' }}>N/A</span>
+    if (!location) return <span style={{ color: '#6a7282', fontStyle: 'italic' }}>N/A</span>
     if (location === 'Client Office') {
       return isCustom ? (
         <input
@@ -1056,11 +1056,11 @@ function App() {
             style={{
               width: '100%',
               padding: '8px',
-              border: '2px solid #ffffff',
-              borderRadius: '6px',
+              border: '1px solid #d1d5dc',
+              borderRadius: '4px',
               fontSize: '14px',
-              background: '#000000',
-              color: '#ffffff',
+              background: '#ffffff',
+              color: '#101828',
               fontWeight: '600',
               marginBottom: '4px',
             }}
@@ -1087,7 +1087,7 @@ function App() {
         />
       )
     }
-    return <span style={{ color: '#666', fontStyle: 'italic' }}>N/A</span>
+    return <span style={{ color: '#6a7282', fontStyle: 'italic' }}>N/A</span>
   }
 
   return (
@@ -1150,14 +1150,14 @@ function App() {
             onClick={openNativeDatePicker}
             style={{
               padding: '12px 16px',
-              border: '2px solid #ffffff',
-              background: '#000000',
-              color: '#ffffff',
-              borderRadius: 8,
+              border: '1px solid #d1d5dc',
+              background: '#ffffff',
+              color: '#364153',
+              borderRadius: 4,
               cursor: 'pointer',
               fontWeight: 700,
               letterSpacing: 1,
-              boxShadow: '0 0 15px rgba(255,255,255,0.2)'
+              boxShadow: 'none'
             }}
             aria-label="Open calendar to select week"
           >
@@ -1194,7 +1194,7 @@ function App() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#ffd600',
+              color: '#7a5c00',
               cursor: 'pointer',
               fontSize: '18px',
               fontWeight: 700,
@@ -1350,14 +1350,14 @@ function App() {
                     top: '100%',
                     left: 0,
                     right: 0,
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
-                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #d1d5dc',
+                    borderRadius: '4px',
                     marginTop: '4px',
                     maxHeight: '200px',
                     overflowY: 'auto',
                     zIndex: 1000,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
                   }}
                 >
             {allUsers
@@ -1376,15 +1376,15 @@ function App() {
                         style={{
                           padding: '12px 16px',
                           cursor: 'pointer',
-                          borderBottom: index < filtered.length - 1 ? '1px solid #333' : 'none',
-                          backgroundColor: user === userName ? '#2a2a2a' : 'transparent',
+                          borderBottom: index < filtered.length - 1 ? '1px solid #f3f4f6' : 'none',
+                          backgroundColor: user === userName ? '#f3f4f6' : 'transparent',
                           transition: 'background-color 0.2s',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#2a2a2a'
+                          e.currentTarget.style.backgroundColor = '#f3f4f6'
                         }}
                         onMouseLeave={(e) => {
                           if (user !== userName) {
@@ -1398,7 +1398,7 @@ function App() {
                   {allUsers.filter(user =>
                     user.toLowerCase().includes(userSearchTerm.toLowerCase())
                   ).length === 0 && (
-                    <div style={{ padding: '12px 16px', color: '#888', fontStyle: 'italic' }}>
+                    <div style={{ padding: '12px 16px', color: '#6a7282', fontStyle: 'italic' }}>
                       No matches found
                     </div>
                   )}
@@ -1435,7 +1435,7 @@ function App() {
               onClick={fillFromLastWeek}
               type="button"
               disabled={loading}
-              style={{ borderColor: '#aaa', color: '#ccc' }}
+              style={{ borderColor: '#d1d5dc', color: '#6a7282' }}
             >
               <span style={{ fontSize: '16px', marginRight: '6px' }}>📋</span> Same As Last Week
             </button>
@@ -1496,7 +1496,7 @@ function App() {
                           className="preset-btn"
                           onClick={() => toggleSplit(index)}
                           type="button"
-                          style={{ fontSize: '11px', padding: '6px 10px', borderColor: '#00ff00', backgroundColor: '#003300', marginTop: '8px' }}
+                          style={{ fontSize: '11px', padding: '6px 10px', borderColor: '#44cb55', backgroundColor: '#eafaed', color: '#234b22', marginTop: '8px' }}
                         >
                           Unsplit
                         </button>
@@ -1556,7 +1556,7 @@ function App() {
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{formatFriendlyDate(entry.date)}</td>
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{entry.dayName}</td>
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#ffff00', fontSize: '12px' }}>Morning</div>
+                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#262453', fontSize: '12px' }}>Morning</div>
                             {renderLocationSelect(entry.morningLocation, (loc) => handleLocationChange(index, loc, 'morning'))}
                           </td>
                           <td>
@@ -1585,8 +1585,9 @@ function App() {
                               style={{
                                 fontSize: '11px',
                                 padding: '6px 10px',
-                                borderColor: '#00ff00',
-                                backgroundColor: '#003300',
+                                borderColor: '#44cb55',
+                                backgroundColor: '#eafaed',
+                                color: '#234b22',
                               }}
                             >
                               Unsplit
@@ -1595,7 +1596,7 @@ function App() {
                         </tr>
                         <tr className="split-afternoon-row">
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#ffff00', fontSize: '12px' }}>Afternoon</div>
+                            <div style={{ fontWeight: '700', marginBottom: '4px', color: '#262453', fontSize: '12px' }}>Afternoon</div>
                             {renderLocationSelect(entry.afternoonLocation, (loc) => handleLocationChange(index, loc, 'afternoon'))}
                           </td>
                           <td>
@@ -1679,10 +1680,10 @@ function App() {
             <div style={{
               marginTop: '8px',
               padding: '10px 14px',
-              background: '#1a1a00',
-              border: '2px solid #ffff00',
-              borderRadius: '8px',
-              color: '#ffffcc',
+              background: '#fef9e7',
+              border: '1px solid #e1ab01',
+              borderRadius: '4px',
+              color: '#7a5c00',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1694,7 +1695,7 @@ function App() {
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="preset-btn" onClick={cancelOverwrite} type="button">Cancel</button>
-                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: '#00ff00' }}>Confirm update</button>
+                <button className="preset-btn" onClick={confirmOverwriteAndSave} type="button" style={{ borderColor: '#262453', color: '#262453' }}>Confirm update</button>
               </div>
             </div>
           )}
@@ -1842,7 +1843,7 @@ function App() {
 
                               return (
                                   <div key={description} style={{ marginTop: '10px', paddingLeft: '20px' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '5px', color: '#ffff00' }}>
+                                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '5px', color: '#262453' }}>
                                     📊 {heading}
                                   </div>
                                   <div className="location-people">
@@ -1901,12 +1902,12 @@ function App() {
                       if (notEntered.length === 0) return null
 
                       return (
-                        <div className="location-group" style={{ marginTop: '16px', borderLeft: '3px solid #444' }}>
+                        <div className="location-group" style={{ marginTop: '16px', borderLeft: '3px solid #d1d5dc' }}>
                           <div className="location-group-title">
                             <span className="location-badge" style={{
-                              background: '#333',
-                              border: '1px solid #555',
-                              color: '#888'
+                              background: '#f3f4f6',
+                              border: '1px solid #d1d5dc',
+                              color: '#6a7282'
                             }}>
                               Not Entered ({notEntered.length})
                             </span>
