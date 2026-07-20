@@ -255,10 +255,10 @@ body {
 .save-btn {
   display: block;
   width: 100%;
-  background: #22c55e;
-  color: #000000;
+  background: #000000;
+  color: #00ff00;
   padding: 12px 24px;
-  border: none;
+  border: 2px solid #00ff00;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 700;
@@ -270,14 +270,16 @@ body {
 }
 
 .save-btn:hover {
-  background: #4ade80;
+  background: #00ff00;
+  color: #000000;
   transform: translateY(-1px);
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 0 7px rgba(0, 255, 0, 0.3);
 }
 
 .save-btn:disabled {
-  background: #1a3a22;
+  background: #000000;
   color: #4a6a52;
+  border-color: #1a3a22;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -644,16 +646,14 @@ body {
 }
 
 .preset-btn-highlight {
-  background: #22c55e;
-  border-color: #22c55e;
-  color: #000000;
+  border-color: #00ff00;
+  color: #00ff00;
 }
 
 .preset-btn-highlight:hover {
-  background: #4ade80;
-  border-color: #4ade80;
+  background: #00ff00;
   color: #000000;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 0 7px rgba(0, 255, 0, 0.3);
 }
 
 .user-list {
