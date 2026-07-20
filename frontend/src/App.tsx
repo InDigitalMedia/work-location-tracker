@@ -1687,7 +1687,7 @@ function App() {
 
       {/* Undo bar after save */}
       {showUndoBar && (
-        <div className="toast" style={{ position: 'fixed', bottom: 20, left: 20, right: 'auto', background: '#000', color: '#00ff00', borderColor: '#00ff00' }}>
+        <div className="toast" style={{ position: 'fixed', top: 'auto', bottom: 20, left: 20, right: 'auto', transform: 'none', background: '#000', color: '#00ff00', borderColor: '#00ff00' }}>
           Updated. <button className="preset-btn" onClick={handleUndo} type="button" style={{ marginLeft: 8 }}>Undo</button>
         </div>
       )}
