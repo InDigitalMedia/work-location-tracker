@@ -147,16 +147,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Work Location Tracker API", version="1.0.0", lifespan=lifespan)
 
 # Add CORS middleware — restricted to known frontend origins (override/extend via
-# the comma-separated CORS_ORIGINS env var for other deploys, e.g. preview URLs)
+# the comma-separated CORS_ORIGINS env var for other deploys) plus this Vercel
+# project's preview deployments, which get a unique per-branch/per-commit hostname
+# that can't be listed individually (e.g. work-location-tracker-git-<branch>-in-digital.vercel.app)
 _default_cors_origins = "https://in-office.vercel.app,http://localhost:5173,http://localhost:4173"
 allowed_origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", _default_cors_origins).split(",")
     if origin.strip()
 ]
+_vercel_preview_origin_regex = os.getenv(
+    "CORS_ORIGIN_REGEX", r"^https://work-location-tracker-[a-z0-9-]+-in-digital\.vercel\.app$"
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=_vercel_preview_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
