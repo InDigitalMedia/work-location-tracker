@@ -145,6 +145,7 @@
   --usercard-current-text: #262453;
   --usercard-current-ring: 0 0 0 2px rgba(0, 173, 205, 0.15);
   --usercard-current-hover-bg: #00adcd;
+  --usercard-current-hover-text: #ffffff;
 
   /* Today highlight */
   --today-bg: #f6fdff;
@@ -274,13 +275,13 @@
   --btn-highlight-hover-bg: #ffffff;
   --btn-highlight-hover-text: #000000;
 
-  --save-bg: #ffffff;
-  --save-text: #000000;
+  --save-bg: #000000;
+  --save-text: #ffffff;
   --save-border: #ffffff;
-  --save-hover-bg: #ffffff;
-  --save-hover-text: #000000;
+  --save-hover-bg: #333333;
+  --save-hover-text: #ffffff;
   --save-hover-border: #ffffff;
-  --save-hover-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 2px 8px rgba(255, 255, 255, 0.2);
+  --save-hover-shadow: 0 4px 10px rgba(255, 255, 255, 0.15);
   --save-disabled-bg: #000000;
   --save-disabled-text: #4a6a52;
   --save-disabled-border: #1a3a22;
@@ -322,10 +323,11 @@
   --usercard-hover-bg: #ffffff;
   --usercard-hover-text: #000000;
   --usercard-hover-border: #ffffff;
-  --usercard-current-border: #00ff00;
-  --usercard-current-text: #00ff00;
-  --usercard-current-ring: 0 0 8px rgba(0, 255, 0, 0.2);
-  --usercard-current-hover-bg: #00ff00;
+  --usercard-current-border: #ffffff;
+  --usercard-current-text: #ffffff;
+  --usercard-current-ring: none;
+  --usercard-current-hover-bg: #ffffff;
+  --usercard-current-hover-text: #000000;
 
   --today-bg: rgba(15, 15, 15, 0.95);
   --today-border: rgba(255, 255, 255, 0.9);
@@ -692,6 +694,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--save-hover-text);
   border-color: var(--save-hover-border);
   box-shadow: var(--save-hover-shadow);
+  transform: var(--btn-hover-transform);
 }
 
 .save-btn:disabled {
@@ -1270,7 +1273,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .user-card.current-user:hover {
   background: var(--usercard-current-hover-bg);
-  color: #ffffff;
+  color: var(--usercard-current-hover-text);
   border-color: var(--usercard-current-border);
 }
 
