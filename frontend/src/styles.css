@@ -539,7 +539,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 12px;
   border-radius: 6px;
   box-shadow: var(--shadow-card);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   border: var(--border-card);
 }
 
@@ -657,7 +657,8 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--row-hover-bg);
 }
 
-.client-input {
+.client-input,
+.notes-input {
   width: 100%;
   padding: 8px;
   border: var(--border-input);
@@ -668,7 +669,8 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
-.client-input:disabled {
+.client-input:disabled,
+.notes-input:disabled {
   background-color: var(--bg-input-disabled);
   color: var(--text-faint);
 }
@@ -831,6 +833,15 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--loc-off-glow);
 }
 
+/* "Not Entered" — deliberately muted/neutral (no location accent color)
+   since it represents the absence of an entry, not a real location */
+.location-none {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 700;
+  border: 1px solid var(--border-input-color);
+}
+
 .empty-state {
   text-align: center;
   padding: 40px;
@@ -860,15 +871,10 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 180px;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+/* Undo bar reuses the .toast styling but sits above the toast so a
+   "Week Saved!" toast and the Undo bar can both show without overlapping */
+.toast-undo {
+  bottom: 80px;
 }
 
 @keyframes toastFadeIn {
@@ -898,12 +904,6 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
   font-size: 16px;
   font-weight: 700;
-}
-
-.location-count {
-  color: var(--text-subtle);
-  font-size: 14px;
-  font-weight: 400;
 }
 
 .location-people {
@@ -1187,7 +1187,8 @@ h1, h2, h3, h4, h5, h6 {
   cursor: default;
 }
 
-.form-section h2 {
+.form-section h2,
+.dashboard h2 {
   color: var(--text-primary);
   margin-bottom: 20px;
   text-align: center;
