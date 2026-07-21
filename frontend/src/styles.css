@@ -270,17 +270,17 @@
   --btn-active-hover-bg: #ffffff;
   --btn-active-hover-border: #ffffff;
 
-  --btn-highlight-color: #00ff00;
-  --btn-highlight-hover-bg: #00ff00;
+  --btn-highlight-color: #ffffff;
+  --btn-highlight-hover-bg: #ffffff;
   --btn-highlight-hover-text: #000000;
 
-  --save-bg: #000000;
-  --save-text: #00ff00;
-  --save-border: #00ff00;
-  --save-hover-bg: #00ff00;
+  --save-bg: #ffffff;
+  --save-text: #000000;
+  --save-border: #ffffff;
+  --save-hover-bg: #ffffff;
   --save-hover-text: #000000;
-  --save-hover-border: #00ff00;
-  --save-hover-shadow: 0 0 7px rgba(0, 255, 0, 0.3);
+  --save-hover-border: #ffffff;
+  --save-hover-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 2px 8px rgba(255, 255, 255, 0.2);
   --save-disabled-bg: #000000;
   --save-disabled-text: #4a6a52;
   --save-disabled-border: #1a3a22;
