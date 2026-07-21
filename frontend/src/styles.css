@@ -1243,6 +1243,13 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--daynav-active-bg);
 }
 
+.day-nav-top-btn {
+  margin-left: auto;
+  padding: 8px 14px;
+  font-size: 15px;
+  line-height: 1;
+}
+
 /* Attendance summary bar in each day section */
 .attendance-bar {
   display: flex;

@@ -1784,6 +1784,15 @@ function App() {
                     </button>
                   )
                 })}
+                <button
+                  className="day-nav-btn day-nav-top-btn"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  type="button"
+                  aria-label="Back to top"
+                  title="Back to top"
+                >
+                  ↑
+                </button>
               </div>
 
               {/* Regular by location view */}
