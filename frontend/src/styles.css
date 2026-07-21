@@ -234,13 +234,13 @@
 
   --border-color: #ffffff;
   --border-card: 1px solid #ffffff;
-  --border-panel: 2px solid rgba(255, 255, 255, 0.2);
-  --border-input: 2px solid #ffffff;
+  --border-panel: 1px solid rgba(255, 255, 255, 0.2);
+  --border-input: 1px solid #ffffff;
   --border-input-color: #ffffff;
   --border-soft: 1px solid #555555;
   --border-subtle-color: rgba(255, 255, 255, 0.1);
   --divider-soft: rgba(255, 255, 255, 0.2);
-  --h3-border: 2px solid #666666;
+  --h3-border: 1px solid #666666;
 
   --shadow-card: 0 0 20px rgba(255, 255, 255, 0.1);
   --shadow-header: 0 0 20px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.8);
@@ -257,7 +257,7 @@
 
   --btn-bg: #000000;
   --btn-text: #ffffff;
-  --btn-border: 2px solid #ffffff;
+  --btn-border: 1px solid #ffffff;
   --btn-hover-bg: #333333;
   --btn-hover-text: #ffffff;
   --btn-hover-border: #ffffff;
@@ -305,7 +305,7 @@
 
   --daynav-bg: transparent;
   --daynav-text: #cccccc;
-  --daynav-border: 2px solid #555555;
+  --daynav-border: 1px solid #555555;
   --daynav-hover-bg: rgba(255, 255, 255, 0.08);
   --daynav-hover-fg: #ffffff;
   --daynav-active-bg: #ffffff;
@@ -318,7 +318,7 @@
   --person-card-hover-border: #666666;
 
   --usercard-bg: #0a0a0a;
-  --usercard-border: 2px solid #ffffff;
+  --usercard-border: 1px solid #ffffff;
   --usercard-hover-bg: #ffffff;
   --usercard-hover-text: #000000;
   --usercard-hover-border: #ffffff;
@@ -370,7 +370,7 @@
   --accent-other: #ff7043;
   --accent-default: #555555;
 
-  --loc-badge-border-width: 2px;
+  --loc-badge-border-width: 1px;
   --loc-office-bg: #00ff00;  --loc-office-text: #000000;  --loc-office-glow: 0 0 15px #00ff00;
   --loc-wfh-bg: #00ffff;     --loc-wfh-text: #000000;     --loc-wfh-glow: 0 0 15px #00ffff;
   --loc-client-bg: #ffff00;  --loc-client-text: #000000;  --loc-client-glow: 0 0 15px #ffff00;
