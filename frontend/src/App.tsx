@@ -161,6 +161,114 @@ function getInitialTheme(): Theme {
   return 'light'
 }
 
+// Searchable client picker - type to filter, click to select. Mirrors the
+// "Your name" field's UX. A separate component (not a plain render helper)
+// because each call site (one per day/period row) needs its own independent
+// search-term/dropdown-open state.
+function ClientSearchInput({
+  value,
+  options,
+  onSelect,
+}: {
+  value: string
+  options: string[]
+  onSelect: (client: string) => void
+}) {
+  const [searchTerm, setSearchTerm] = useState(value || '')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  // Keep the visible text in sync if the value changes from outside (e.g.
+  // switching to a different day/period, or loading existing entries)
+  useEffect(() => {
+    setSearchTerm(value || '')
+  }, [value])
+
+  const filtered = options.filter((o) => o.toLowerCase().includes(searchTerm.toLowerCase()))
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => {
+          setSearchTerm(e.target.value)
+          onSelect(e.target.value)
+          setShowDropdown(true)
+        }}
+        onFocus={() => setShowDropdown(true)}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        placeholder="Search client"
+        style={{
+          width: '100%',
+          padding: '8px',
+          border: 'var(--border-input)',
+          borderRadius: '4px',
+          fontSize: '14px',
+          background: 'var(--select-bg)',
+          color: 'var(--select-text)',
+          fontWeight: '600',
+        }}
+      />
+      {showDropdown && (
+        <div
+          className="user-dropdown"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: 'var(--bg-surface)',
+            border: 'var(--border-input)',
+            borderRadius: '4px',
+            marginTop: '4px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            zIndex: 1000,
+            boxShadow: 'var(--shadow-hover)',
+          }}
+        >
+          {filtered.map((c, index, arr) => (
+            <div
+              key={c}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setSearchTerm(c)
+                onSelect(c)
+                setShowDropdown(false)
+              }}
+              style={{
+                padding: '12px 16px',
+                cursor: 'pointer',
+                borderBottom: index < arr.length - 1 ? '1px solid var(--border-subtle-color)' : 'none',
+                backgroundColor: c === value ? 'var(--bg-muted)' : 'transparent',
+                transition: 'background-color 0.2s',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-muted)'
+              }}
+              onMouseLeave={(e) => {
+                if (c !== value) {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }
+              }}
+            >
+              {c}
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              No matches found
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('fill')
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
@@ -577,41 +685,6 @@ function App() {
       }
     } else {
     newEntries[index].client = client
-    }
-    setWeekEntries(newEntries)
-  }
-
-  const handleClientTypeChange = (index: number, clientType: string, period?: 'morning' | 'afternoon') => {
-    const newEntries = [...weekEntries]
-    const entry = newEntries[index]
-    const isSplit = splitDays.has(entry.date)
-
-    if (isSplit && period) {
-      if (period === 'morning') {
-        if (clientType === 'Other') {
-          newEntries[index].morningIsCustomClient = true
-          newEntries[index].morningClient = ''
-        } else {
-          newEntries[index].morningIsCustomClient = false
-          newEntries[index].morningClient = clientType
-        }
-      } else {
-        if (clientType === 'Other') {
-          newEntries[index].afternoonIsCustomClient = true
-          newEntries[index].afternoonClient = ''
-        } else {
-          newEntries[index].afternoonIsCustomClient = false
-          newEntries[index].afternoonClient = clientType
-        }
-      }
-    } else {
-    if (clientType === 'Other') {
-      newEntries[index].isCustomClient = true
-      newEntries[index].client = ''
-    } else {
-      newEntries[index].isCustomClient = false
-      newEntries[index].client = clientType
-      }
     }
     setWeekEntries(newEntries)
   }
@@ -1061,8 +1134,7 @@ function App() {
     location: WorkLocation | undefined,
     client: string | undefined,
     isCustom: boolean | undefined,
-    onChange: (client: string) => void,
-    onClientTypeChange: (clientType: string) => void
+    onChange: (client: string) => void
   ) => {
     if (!location) return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>N/A</span>
     if (location === 'Client Office') {
@@ -1076,31 +1148,11 @@ function App() {
           style={{ marginTop: '4px' }}
         />
       ) : (
-        <div>
-          <select
-            value={client || ''}
-            onChange={(e) => onClientTypeChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: 'var(--border-input)',
-              borderRadius: '4px',
-              fontSize: '14px',
-              background: 'var(--select-bg)',
-              color: 'var(--select-text)',
-              fontWeight: '600',
-              marginBottom: '4px',
-            }}
-          >
-            <option value="">Select client</option>
-            {clientOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-            <option value="Other">Other</option>
-          </select>
-        </div>
+        <ClientSearchInput
+          value={client || ''}
+          options={clientOptions}
+          onSelect={onChange}
+        />
       )
     } else if (location === 'Other') {
       return (
@@ -1506,8 +1558,7 @@ function App() {
                             entry.morningLocation,
                             entry.morningClient,
                             entry.morningIsCustomClient,
-                            (c) => handleClientChange(index, c, 'morning'),
-                            (ct) => handleClientTypeChange(index, ct, 'morning')
+                            (c) => handleClientChange(index, c, 'morning')
                           )}
                           <input
                             type="text"
@@ -1524,8 +1575,7 @@ function App() {
                             entry.afternoonLocation,
                             entry.afternoonClient,
                             entry.afternoonIsCustomClient,
-                            (c) => handleClientChange(index, c, 'afternoon'),
-                            (ct) => handleClientTypeChange(index, ct, 'afternoon')
+                            (c) => handleClientChange(index, c, 'afternoon')
                           )}
                           <input
                             type="text"
@@ -1551,8 +1601,7 @@ function App() {
                           entry.location,
                           entry.client,
                           entry.isCustomClient,
-                          (c) => handleClientChange(index, c),
-                          (ct) => handleClientTypeChange(index, ct)
+                          (c) => handleClientChange(index, c)
                         )}
                         <input
                           type="text"
@@ -1607,8 +1656,7 @@ function App() {
                               entry.morningLocation,
                               entry.morningClient,
                               entry.morningIsCustomClient,
-                              (client) => handleClientChange(index, client, 'morning'),
-                              (clientType) => handleClientTypeChange(index, clientType, 'morning')
+                              (client) => handleClientChange(index, client, 'morning')
                             )}
                           </td>
                           <td>
@@ -1647,8 +1695,7 @@ function App() {
                               entry.afternoonLocation,
                               entry.afternoonClient,
                               entry.afternoonIsCustomClient,
-                              (client) => handleClientChange(index, client, 'afternoon'),
-                              (clientType) => handleClientTypeChange(index, clientType, 'afternoon')
+                              (client) => handleClientChange(index, client, 'afternoon')
                             )}
                           </td>
                           <td>
@@ -1677,8 +1724,7 @@ function App() {
                           entry.location,
                           entry.client,
                           entry.isCustomClient,
-                          (client) => handleClientChange(index, client),
-                          (clientType) => handleClientTypeChange(index, clientType)
+                          (client) => handleClientChange(index, client)
                       )}
                     </td>
                     <td>
