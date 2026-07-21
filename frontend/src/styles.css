@@ -373,12 +373,12 @@
   --accent-default: #555555;
 
   --loc-badge-border-width: 1px;
-  --loc-office-bg: #00ff00;  --loc-office-text: #000000;  --loc-office-glow: 0 0 15px #00ff00;
-  --loc-wfh-bg: #00ffff;     --loc-wfh-text: #000000;     --loc-wfh-glow: 0 0 15px #00ffff;
-  --loc-client-bg: #ffff00;  --loc-client-text: #000000;  --loc-client-glow: 0 0 15px #ffff00;
-  --loc-abroad-bg: #bb86fc;  --loc-abroad-text: #000000;  --loc-abroad-glow: 0 0 15px #bb86fc;
-  --loc-other-bg: #ff7043;   --loc-other-text: #000000;   --loc-other-glow: 0 0 15px #ff7043;
-  --loc-off-bg: #ff00ff;     --loc-off-text: #000000;     --loc-off-glow: 0 0 15px #ff00ff;
+  --loc-office-bg: #39ff14;  --loc-office-text: #000000;  --loc-office-glow: none;
+  --loc-wfh-bg: #00e5ff;     --loc-wfh-text: #000000;     --loc-wfh-glow: none;
+  --loc-client-bg: #ffd600;  --loc-client-text: #000000;  --loc-client-glow: none;
+  --loc-abroad-bg: #bb86fc;  --loc-abroad-text: #000000;  --loc-abroad-glow: none;
+  --loc-other-bg: #ff7043;   --loc-other-text: #000000;   --loc-other-glow: none;
+  --loc-off-bg: #ff00ff;     --loc-off-text: #000000;     --loc-off-glow: none;
 }
 
 * {
