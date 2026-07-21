@@ -70,15 +70,18 @@ def migrate_postgres(conn):
         WHERE user_key IS NULL
     """))
     
-    # Step 3: Deduplicate - keep latest by created_at for each (user_key, date)
+    # Step 3: Deduplicate - keep the row with the highest id for each (user_key, date).
+    # (Matches migrate_sqlite's approach below; a created_at-based comparison can leave
+    # ties unresolved when duplicates share the same created_at, e.g. from batch inserts.)
     logger.info("Deduplicating entries...")
     conn.execute(text("""
-        DELETE FROM entry e1
-        USING entry e2
-        WHERE e1.user_key = e2.user_key
-          AND e1.date = e2.date
-          AND e1.id < e2.id
-          AND e1.created_at < e2.created_at
+        DELETE FROM entry
+        WHERE id NOT IN (
+            SELECT MAX(id)
+            FROM entry
+            WHERE user_key IS NOT NULL AND user_key != ''
+            GROUP BY user_key, date
+        )
     """))
     
     # Step 4: Set user_key NOT NULL

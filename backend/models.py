@@ -11,7 +11,7 @@ class Entry(SQLModel, table=True):
     user_name: str = Field(index=True)  # Display name (preserves casing)
     date: str = Field(index=True)  # YYYY-MM-DD format
     location: str = Field(index=True)
-    time_period: str | None = Field(default=None, index=True)  # 'Morning', 'Afternoon', or None for full day
+    time_period: str = Field(default="", index=True)  # 'Morning', 'Afternoon', or '' for full day
     client: str | None = Field(default=None)
     notes: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
