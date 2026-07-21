@@ -145,6 +145,7 @@
   --usercard-current-text: #262453;
   --usercard-current-ring: 0 0 0 2px rgba(0, 173, 205, 0.15);
   --usercard-current-hover-bg: #00adcd;
+  --usercard-current-hover-text: #ffffff;
 
   /* Today highlight */
   --today-bg: #f6fdff;
@@ -234,19 +235,19 @@
 
   --border-color: #ffffff;
   --border-card: 1px solid #ffffff;
-  --border-panel: 2px solid rgba(255, 255, 255, 0.2);
-  --border-input: 2px solid #ffffff;
+  --border-panel: 1px solid rgba(255, 255, 255, 0.2);
+  --border-input: 1px solid #ffffff;
   --border-input-color: #ffffff;
   --border-soft: 1px solid #555555;
   --border-subtle-color: rgba(255, 255, 255, 0.1);
   --divider-soft: rgba(255, 255, 255, 0.2);
-  --h3-border: 2px solid #666666;
+  --h3-border: 1px solid #666666;
 
   --shadow-card: 0 0 20px rgba(255, 255, 255, 0.1);
   --shadow-header: 0 0 20px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.8);
   --shadow-panel: 0 0 10px rgba(255, 255, 255, 0.1);
   --shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-toast: 0 0 20px rgba(0, 255, 0, 0.4);
+  --shadow-toast: 0 0 20px rgba(255, 255, 255, 0.3);
 
   --accent-focus: #ffffff;
   --focus-ring: 0 0 15px rgba(255, 255, 255, 0.5);
@@ -257,7 +258,7 @@
 
   --btn-bg: #000000;
   --btn-text: #ffffff;
-  --btn-border: 2px solid #ffffff;
+  --btn-border: 1px solid #ffffff;
   --btn-hover-bg: #333333;
   --btn-hover-text: #ffffff;
   --btn-hover-border: #ffffff;
@@ -270,24 +271,24 @@
   --btn-active-hover-bg: #ffffff;
   --btn-active-hover-border: #ffffff;
 
-  --btn-highlight-color: #00ff00;
-  --btn-highlight-hover-bg: #00ff00;
+  --btn-highlight-color: #ffffff;
+  --btn-highlight-hover-bg: #ffffff;
   --btn-highlight-hover-text: #000000;
 
   --save-bg: #000000;
-  --save-text: #00ff00;
-  --save-border: #00ff00;
-  --save-hover-bg: #00ff00;
-  --save-hover-text: #000000;
-  --save-hover-border: #00ff00;
-  --save-hover-shadow: 0 0 7px rgba(0, 255, 0, 0.3);
+  --save-text: #ffffff;
+  --save-border: #ffffff;
+  --save-hover-bg: #333333;
+  --save-hover-text: #ffffff;
+  --save-hover-border: #ffffff;
+  --save-hover-shadow: 0 4px 10px rgba(255, 255, 255, 0.15);
   --save-disabled-bg: #000000;
-  --save-disabled-text: #4a6a52;
-  --save-disabled-border: #1a3a22;
+  --save-disabled-text: #666666;
+  --save-disabled-border: #333333;
 
   --toast-bg: #000000;
-  --toast-text: #00ff00;
-  --toast-border: #00ff00;
+  --toast-text: #ffffff;
+  --toast-border: #ffffff;
 
   --week-thead-bg: #1a1a1a;
   --week-thead-text: #888888;
@@ -305,7 +306,7 @@
 
   --daynav-bg: transparent;
   --daynav-text: #cccccc;
-  --daynav-border: 2px solid #555555;
+  --daynav-border: 1px solid #555555;
   --daynav-hover-bg: rgba(255, 255, 255, 0.08);
   --daynav-hover-fg: #ffffff;
   --daynav-active-bg: #ffffff;
@@ -318,14 +319,15 @@
   --person-card-hover-border: #666666;
 
   --usercard-bg: #0a0a0a;
-  --usercard-border: 2px solid #ffffff;
+  --usercard-border: 1px solid #ffffff;
   --usercard-hover-bg: #ffffff;
   --usercard-hover-text: #000000;
   --usercard-hover-border: #ffffff;
-  --usercard-current-border: #00ff00;
-  --usercard-current-text: #00ff00;
-  --usercard-current-ring: 0 0 8px rgba(0, 255, 0, 0.2);
-  --usercard-current-hover-bg: #00ff00;
+  --usercard-current-border: #ffffff;
+  --usercard-current-text: #ffffff;
+  --usercard-current-ring: none;
+  --usercard-current-hover-bg: #ffffff;
+  --usercard-current-hover-text: #000000;
 
   --today-bg: rgba(15, 15, 15, 0.95);
   --today-border: rgba(255, 255, 255, 0.9);
@@ -351,9 +353,9 @@
   --pill-border: 1px solid rgba(255, 255, 255, 0.12);
   --pill-text: rgba(255, 255, 255, 0.45);
 
-  --greenpill-bg: rgba(0, 255, 0, 0.1);
-  --greenpill-border: #39ff14;
-  --greenpill-text: #39ff14;
+  --greenpill-bg: rgba(255, 255, 255, 0.08);
+  --greenpill-border: #ffffff;
+  --greenpill-text: #ffffff;
 
   --split-tint: rgba(184, 134, 11, 0.08);
   --split-border: #b8860b;
@@ -370,13 +372,13 @@
   --accent-other: #ff7043;
   --accent-default: #555555;
 
-  --loc-badge-border-width: 2px;
-  --loc-office-bg: #00ff00;  --loc-office-text: #000000;  --loc-office-glow: 0 0 15px #00ff00;
-  --loc-wfh-bg: #00ffff;     --loc-wfh-text: #000000;     --loc-wfh-glow: 0 0 15px #00ffff;
-  --loc-client-bg: #ffff00;  --loc-client-text: #000000;  --loc-client-glow: 0 0 15px #ffff00;
-  --loc-abroad-bg: #bb86fc;  --loc-abroad-text: #000000;  --loc-abroad-glow: 0 0 15px #bb86fc;
-  --loc-other-bg: #ff7043;   --loc-other-text: #000000;   --loc-other-glow: 0 0 15px #ff7043;
-  --loc-off-bg: #ff00ff;     --loc-off-text: #000000;     --loc-off-glow: 0 0 15px #ff00ff;
+  --loc-badge-border-width: 1px;
+  --loc-office-bg: #39ff14;  --loc-office-text: #000000;  --loc-office-glow: none;
+  --loc-wfh-bg: #00e5ff;     --loc-wfh-text: #000000;     --loc-wfh-glow: none;
+  --loc-client-bg: #ffd600;  --loc-client-text: #000000;  --loc-client-glow: none;
+  --loc-abroad-bg: #bb86fc;  --loc-abroad-text: #000000;  --loc-abroad-glow: none;
+  --loc-other-bg: #ff7043;   --loc-other-text: #000000;   --loc-other-glow: none;
+  --loc-off-bg: #ff00ff;     --loc-off-text: #000000;     --loc-off-glow: none;
 }
 
 * {
@@ -692,6 +694,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--save-hover-text);
   border-color: var(--save-hover-border);
   box-shadow: var(--save-hover-shadow);
+  transform: var(--btn-hover-transform);
 }
 
 .save-btn:disabled {
@@ -1240,6 +1243,30 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--daynav-active-bg);
 }
 
+.day-nav-top-btn {
+  margin-left: auto;
+  padding: 8px 16px;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--daynav-active-bg);
+  color: var(--daynav-active-text);
+  border-color: var(--daynav-active-border);
+}
+
+.day-nav-top-btn span {
+  font-size: 16px;
+}
+
+.day-nav-top-btn:hover {
+  background: var(--daynav-active-bg);
+  color: var(--daynav-active-text);
+  border-color: var(--daynav-active-border);
+  opacity: 0.85;
+}
+
 /* Attendance summary bar in each day section */
 .attendance-bar {
   display: flex;
@@ -1270,7 +1297,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .user-card.current-user:hover {
   background: var(--usercard-current-hover-bg);
-  color: #ffffff;
+  color: var(--usercard-current-hover-text);
   border-color: var(--usercard-current-border);
 }
 
