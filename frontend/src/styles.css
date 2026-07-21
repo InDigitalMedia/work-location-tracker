@@ -205,12 +205,12 @@
 
   /* Location badges */
   --loc-badge-border-width: 1px;
-  --loc-office-bg: #44cb55;  --loc-office-text: #101828;  --loc-office-glow: none;
-  --loc-wfh-bg: #00adcd;     --loc-wfh-text: #101828;     --loc-wfh-glow: none;
-  --loc-client-bg: #e1ab01;  --loc-client-text: #101828;  --loc-client-glow: none;
-  --loc-abroad-bg: #262453;  --loc-abroad-text: #ffffff;  --loc-abroad-glow: none;
-  --loc-other-bg: #6a7282;   --loc-other-text: #ffffff;   --loc-other-glow: none;
-  --loc-off-bg: #c62877;     --loc-off-text: #ffffff;     --loc-off-glow: none;
+  --loc-office-bg: #1fca42;  --loc-office-text: #101828;  --loc-office-glow: none;
+  --loc-wfh-bg: #00c2e5;     --loc-wfh-text: #101828;     --loc-wfh-glow: none;
+  --loc-client-bg: #f7b500;  --loc-client-text: #101828;  --loc-client-glow: none;
+  --loc-abroad-bg: #3a34c9;  --loc-abroad-text: #ffffff;  --loc-abroad-glow: none;
+  --loc-other-bg: #4b5563;   --loc-other-text: #ffffff;   --loc-other-glow: none;
+  --loc-off-bg: #dd1a7c;     --loc-off-text: #ffffff;     --loc-off-glow: none;
 }
 
 :root[data-theme="dark"] {
