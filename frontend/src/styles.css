@@ -135,8 +135,9 @@
   --person-card-hover-bg: #f9fafb;
   --person-card-hover-border: #d1d5dc;
 
-  /* User cards */
-  --usercard-bg: #ffffff;
+  /* User cards - a light gray fill (lighter than the "Not Entered" pills'
+     gray) plus bolder text signals "has entered" */
+  --usercard-bg: #f9fafb;
   --usercard-border: 1px solid #d1d5dc;
   --usercard-hover-bg: #f3f4f6;
   --usercard-hover-text: #101828;
@@ -1110,7 +1111,7 @@ h1, h2, h3, h4, h5, h6 {
   border: none;
   color: inherit;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   text-align: center;
   letter-spacing: normal;
