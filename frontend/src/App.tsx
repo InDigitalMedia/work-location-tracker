@@ -409,12 +409,11 @@ function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Monday reminder: show banner if it's Monday and user hasn't submitted for current week
+  // Reminder: show banner any day, as long as we're looking at the current
+  // week and it hasn't been filled in yet
   useEffect(() => {
-    const today = new Date()
-    const isMonday = today.getDay() === 1
     const isCurrentWeek = formatDate(weekStart) === formatDate(getMondayOfWeek(new Date()))
-    if (isMonday && isCurrentWeek && existingEntriesCount === 0) {
+    if (isCurrentWeek && existingEntriesCount === 0) {
       setShowReminderBanner(true)
     } else {
       setShowReminderBanner(false)
