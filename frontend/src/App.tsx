@@ -1894,7 +1894,7 @@ function App() {
                                     : description
 
                               return (
-                                  <div key={description} style={{ marginTop: '10px', paddingLeft: '20px' }}>
+                                  <div key={description} style={{ marginTop: '10px' }}>
                                   <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-heading)' }}>
                                     📊 {heading}
                                   </div>
