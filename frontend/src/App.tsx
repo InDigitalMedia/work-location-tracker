@@ -1904,7 +1904,6 @@ function App() {
                                         {entry.user_name}
                                         {/* Show time period next to name if it's not a full day */}
                                         {entry.time_period && entry.time_period !== 'Full Day' && ` (${entry.time_period})`}
-                                          {index < entries.length - 1 && ', '}
                                       </span>
                                     ))}
                                   </div>
@@ -1922,17 +1921,16 @@ function App() {
                               <span className={`location-badge ${getLocationBadgeClass(baseLocation)}`}>
                                 {baseLocation}
                               </span>
-                              <span className="location-people">
-                                {allEntriesForLocation.map((entry, index) => (
-                                  <span key={`${entry.user_name}-${entry.time_period || 'full'}-${index}`} className="person-name-inline">
-                                    {entry.user_name}
-                                    {/* Show time period next to name if it's not a full day */}
-                                    {entry.time_period && entry.time_period !== 'Full Day' && ` (${entry.time_period})`}
-                                    {(entry.client && (baseLocation === 'Client Office' || baseLocation === 'Other')) && ` (${entry.client})`}
-                                    {index < allEntriesForLocation.length - 1 && ', '}
-                                  </span>
-                                ))}
-                              </span>
+                            </div>
+                            <div className="location-people">
+                              {allEntriesForLocation.map((entry, index) => (
+                                <span key={`${entry.user_name}-${entry.time_period || 'full'}-${index}`} className="person-name-inline">
+                                  {entry.user_name}
+                                  {/* Show time period next to name if it's not a full day */}
+                                  {entry.time_period && entry.time_period !== 'Full Day' && ` (${entry.time_period})`}
+                                  {(entry.client && (baseLocation === 'Client Office' || baseLocation === 'Other')) && ` (${entry.client})`}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         )
