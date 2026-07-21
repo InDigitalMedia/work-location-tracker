@@ -1,8 +1,9 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 from sqlalchemy import text
@@ -62,17 +63,18 @@ def check_time_period_column_exists(session: Session = None) -> bool:
     
     try:
         is_postgres = "postgresql" in str(engine.url).lower()
-        if is_postgres:
-            result = engine.connect().execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'entry' AND column_name = 'time_period'
-            """))
-            _time_period_exists = result.fetchone() is not None
-        else:
-            result = engine.connect().execute(text("PRAGMA table_info(entry)"))
-            columns = [row[1] for row in result.fetchall()]
-            _time_period_exists = 'time_period' in columns
+        with engine.connect() as conn:
+            if is_postgres:
+                result = conn.execute(text("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = 'entry' AND column_name = 'time_period'
+                """))
+                _time_period_exists = result.fetchone() is not None
+            else:
+                result = conn.execute(text("PRAGMA table_info(entry)"))
+                columns = [row[1] for row in result.fetchall()]
+                _time_period_exists = 'time_period' in columns
     except Exception as e:
         logger.warning(f"Could not check time_period column: {e}")
         _time_period_exists = False
@@ -110,8 +112,6 @@ async def lifespan(app: FastAPI):
     
     # Run migrations if needed
     try:
-        import sys
-        import os
         migrations_path = os.path.join(os.path.dirname(__file__), 'migrations')
         if os.path.exists(migrations_path):
             # Run migration 001: Add user_key constraint
@@ -146,14 +146,31 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(title="Work Location Tracker API", version="1.0.0", lifespan=lifespan)
 
-# Add CORS middleware
+# Add CORS middleware — restricted to known frontend origins (override/extend via
+# the comma-separated CORS_ORIGINS env var for other deploys, e.g. preview URLs)
+_default_cors_origins = "https://in-office.vercel.app,http://localhost:5173,http://localhost:4173"
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", _default_cors_origins).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+
+
+def require_admin(x_admin_secret: str | None = Header(default=None)):
+    """Gate admin/utility routes behind a shared secret set via the ADMIN_SECRET env var."""
+    if not ADMIN_SECRET:
+        raise HTTPException(status_code=503, detail="Admin endpoints are not configured")
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
 
 
 @app.post("/entries/bulk_upsert", response_model=BulkUpsertResponse)
@@ -171,12 +188,10 @@ def bulk_upsert_entries(
     try:
         # Use single transaction for atomicity
         count = 0
-        
-        # Check if time_period column exists
-        time_period_exists = check_time_period_column_exists()
-        logger.info(f"time_period column exists: {time_period_exists}")
-        
-        # Check if PostgreSQL (for ON CONFLICT) or SQLite (use merge pattern)
+
+        # time_period always exists by the time requests are served (migration 002
+        # runs on every app startup, before lifespan yields) -- the legacy
+        # no-time_period code paths this once branched on have been removed.
         is_postgres = False
         try:
             if hasattr(session.bind, 'url'):
@@ -186,203 +201,121 @@ def bulk_upsert_entries(
                 is_postgres = "postgresql" in str(engine.url).lower()
         except Exception:
             pass  # Default to SQLite pattern
-        
-        # If time_period exists, handle overwriting between split and full-day entries
-        if time_period_exists:
-            # Collect dates that have split entries (time_period is not None/empty)
-            split_dates = set()
-            # Collect dates that have full-day entries (time_period is None/empty)
-            full_day_dates = set()
-            
-            for entry_data in request.entries:
-                if entry_data.time_period and entry_data.time_period.strip():
-                    split_dates.add(entry_data.date)
-                else:
-                    # time_period is None or empty string - this is a full-day entry
-                    full_day_dates.add(entry_data.date)
-            
-            # Delete old full-day entries for dates that now have split entries
-            if split_dates:
-                logger.info(f"Deleting old full-day entries for split dates: {split_dates}")
-                placeholders = ','.join([':date' + str(i) for i in range(len(split_dates))])
-                params = {"user_key": user_key}
-                for i, date in enumerate(split_dates):
-                    params[f"date{i}"] = date
-                session.execute(
-                    text(f"""
-                        DELETE FROM entry 
-                        WHERE user_key = :user_key 
-                        AND date IN ({placeholders})
-                        AND (time_period = '' OR time_period IS NULL)
-                    """),
-                    params
-                )
-            
-            # Delete old split entries (Morning/Afternoon) for dates that now have full-day entries
-            if full_day_dates:
-                logger.info(f"Deleting old split entries for full-day dates: {full_day_dates}")
-                placeholders = ','.join([':date' + str(i) for i in range(len(full_day_dates))])
-                params = {"user_key": user_key}
-                for i, date in enumerate(full_day_dates):
-                    params[f"date{i}"] = date
-                session.execute(
-                    text(f"""
-                        DELETE FROM entry 
-                        WHERE user_key = :user_key 
-                        AND date IN ({placeholders})
-                        AND (time_period != '' AND time_period IS NOT NULL)
-                    """),
-                    params
-                )
-            
-            # Commit deletions before inserting new entries
-            if split_dates or full_day_dates:
-                session.commit()
-        
+
+        # Handle overwriting between split and full-day entries
+        # Collect dates that have split entries (time_period is not None/empty)
+        split_dates = set()
+        # Collect dates that have full-day entries (time_period is None/empty)
+        full_day_dates = set()
+
+        for entry_data in request.entries:
+            if entry_data.time_period and entry_data.time_period.strip():
+                split_dates.add(entry_data.date)
+            else:
+                # time_period is None or empty string - this is a full-day entry
+                full_day_dates.add(entry_data.date)
+
+        # Delete old full-day entries for dates that now have split entries
+        if split_dates:
+            logger.info(f"Deleting old full-day entries for split dates: {split_dates}")
+            placeholders = ','.join([':date' + str(i) for i in range(len(split_dates))])
+            params = {"user_key": user_key}
+            for i, date in enumerate(split_dates):
+                params[f"date{i}"] = date
+            session.execute(
+                text(f"""
+                    DELETE FROM entry
+                    WHERE user_key = :user_key
+                    AND date IN ({placeholders})
+                    AND (time_period = '' OR time_period IS NULL)
+                """),
+                params
+            )
+
+        # Delete old split entries (Morning/Afternoon) for dates that now have full-day entries
+        if full_day_dates:
+            logger.info(f"Deleting old split entries for full-day dates: {full_day_dates}")
+            placeholders = ','.join([':date' + str(i) for i in range(len(full_day_dates))])
+            params = {"user_key": user_key}
+            for i, date in enumerate(full_day_dates):
+                params[f"date{i}"] = date
+            session.execute(
+                text(f"""
+                    DELETE FROM entry
+                    WHERE user_key = :user_key
+                    AND date IN ({placeholders})
+                    AND (time_period != '' AND time_period IS NOT NULL)
+                """),
+                params
+            )
+
         for entry_data in request.entries:
             # Validate entry
             if not entry_data.date:
                 continue
-                
+
             # Use current timestamp for created_at/updated_at
             now = datetime.now(UTC)
-            
+            # Normalize None to empty string for consistency with migration
+            time_period_value = entry_data.time_period if entry_data.time_period is not None else ''
+
             if is_postgres:
-                if time_period_exists:
-                    # PostgreSQL: Use INSERT ... ON CONFLICT DO UPDATE with time_period
-                    # Normalize None to empty string for consistency with migration
-                    time_period_value = entry_data.time_period if entry_data.time_period is not None else ''
-                    logger.info(f"Saving entry: date={entry_data.date}, location={entry_data.location}, time_period={time_period_value}")
-                    result = session.execute(
-                        text("""
-                            INSERT INTO entry (user_key, user_name, date, location, time_period, client, notes, created_at, updated_at)
-                            VALUES (:user_key, :user_name, :date, :location, :time_period, :client, :notes, :created_at, :updated_at)
-                            ON CONFLICT (user_key, date, time_period) DO UPDATE
-                            SET user_name = EXCLUDED.user_name,
-                                location = EXCLUDED.location,
-                                client = EXCLUDED.client,
-                                notes = EXCLUDED.notes,
-                                updated_at = EXCLUDED.updated_at
-                        """),
-                        {
-                            "user_key": user_key,
-                            "user_name": request.user_name.strip(),
-                            "date": entry_data.date,
-                            "location": entry_data.location,
-                            "time_period": time_period_value,
-                            "client": entry_data.client,
-                            "notes": entry_data.notes,
-                            "created_at": now,
-                            "updated_at": now,
-                        }
-                    )
-                else:
-                    # PostgreSQL: Use INSERT ... ON CONFLICT DO UPDATE without time_period
-                    result = session.execute(
-                        text("""
-                            INSERT INTO entry (user_key, user_name, date, location, client, notes, created_at, updated_at)
-                            VALUES (:user_key, :user_name, :date, :location, :client, :notes, :created_at, :updated_at)
-                            ON CONFLICT (user_key, date) DO UPDATE
-                            SET user_name = EXCLUDED.user_name,
-                                location = EXCLUDED.location,
-                                client = EXCLUDED.client,
-                                notes = EXCLUDED.notes,
-                                updated_at = EXCLUDED.updated_at
-                        """),
-                        {
-                            "user_key": user_key,
-                            "user_name": request.user_name.strip(),
-                            "date": entry_data.date,
-                            "location": entry_data.location,
-                            "client": entry_data.client,
-                            "notes": entry_data.notes,
-                            "created_at": now,
-                            "updated_at": now,
-                        }
-                    )
+                logger.info(f"Saving entry: date={entry_data.date}, location={entry_data.location}, time_period={time_period_value}")
+                result = session.execute(
+                    text("""
+                        INSERT INTO entry (user_key, user_name, date, location, time_period, client, notes, created_at, updated_at)
+                        VALUES (:user_key, :user_name, :date, :location, :time_period, :client, :notes, :created_at, :updated_at)
+                        ON CONFLICT (user_key, date, time_period) DO UPDATE
+                        SET user_name = EXCLUDED.user_name,
+                            location = EXCLUDED.location,
+                            client = EXCLUDED.client,
+                            notes = EXCLUDED.notes,
+                            updated_at = EXCLUDED.updated_at
+                    """),
+                    {
+                        "user_key": user_key,
+                        "user_name": request.user_name.strip(),
+                        "date": entry_data.date,
+                        "location": entry_data.location,
+                        "time_period": time_period_value,
+                        "client": entry_data.client,
+                        "notes": entry_data.notes,
+                        "created_at": now,
+                        "updated_at": now,
+                    }
+                )
                 count += result.rowcount if result.rowcount else 1
             else:
                 # SQLite: Use ORM merge pattern (select, update or insert)
-                # Normalize None to empty string for consistency
-                time_period_value = entry_data.time_period if entry_data.time_period is not None else ''
-                
-                if time_period_exists:
-                    existing = session.exec(
-                        select(Entry)
-                        .where(Entry.user_key == user_key)
-                        .where(Entry.date == entry_data.date)
-                        .where(Entry.time_period == time_period_value)
-                    ).first()
-                else:
-                    # Use raw SQL to check existing entry
-                    result = session.execute(text("""
-                        SELECT id, user_key, user_name, date, location, client, notes, created_at, updated_at
-                        FROM entry
-                        WHERE user_key = :user_key AND date = :date
-                    """), {"user_key": user_key, "date": entry_data.date})
-                    row = result.fetchone()
-                    existing = type('Entry', (), {
-                        "id": row[0], "user_key": row[1], "user_name": row[2],
-                        "date": row[3], "location": row[4], "client": row[5],
-                        "notes": row[6], "created_at": row[7], "updated_at": row[8],
-                    })() if row else None
-                
+                existing = session.exec(
+                    select(Entry)
+                    .where(Entry.user_key == user_key)
+                    .where(Entry.date == entry_data.date)
+                    .where(Entry.time_period == time_period_value)
+                ).first()
+
                 if existing:
-                    # Update existing
-                    if time_period_exists:
-                        existing.user_name = request.user_name.strip()
-                        existing.location = entry_data.location
-                        existing.time_period = time_period_value
-                        existing.client = entry_data.client
-                        existing.notes = entry_data.notes
-                        existing.updated_at = now
-                    else:
-                        # Use raw SQL to update
-                        session.execute(text("""
-                            UPDATE entry
-                            SET user_name = :user_name, location = :location,
-                                client = :client, notes = :notes, updated_at = :updated_at
-                            WHERE id = :id
-                        """), {
-                            "id": existing.id,
-                            "user_name": request.user_name.strip(),
-                            "location": entry_data.location,
-                            "client": entry_data.client,
-                            "notes": entry_data.notes,
-                            "updated_at": now,
-                        })
+                    existing.user_name = request.user_name.strip()
+                    existing.location = entry_data.location
+                    existing.time_period = time_period_value
+                    existing.client = entry_data.client
+                    existing.notes = entry_data.notes
+                    existing.updated_at = now
                 else:
-                    # Insert new
-                    if time_period_exists:
-                        new_entry = Entry(
-                            user_key=user_key,
-                            user_name=request.user_name.strip(),
-                            date=entry_data.date,
-                            location=entry_data.location,
-                            time_period=time_period_value,
-                            client=entry_data.client,
-                            notes=entry_data.notes,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                        session.add(new_entry)
-                    else:
-                        # Use raw SQL to insert
-                        session.execute(text("""
-                            INSERT INTO entry (user_key, user_name, date, location, client, notes, created_at, updated_at)
-                            VALUES (:user_key, :user_name, :date, :location, :client, :notes, :created_at, :updated_at)
-                        """), {
-                            "user_key": user_key,
-                            "user_name": request.user_name.strip(),
-                            "date": entry_data.date,
-                            "location": entry_data.location,
-                            "client": entry_data.client,
-                            "notes": entry_data.notes,
-                            "created_at": now,
-                            "updated_at": now,
-                        })
+                    new_entry = Entry(
+                        user_key=user_key,
+                        user_name=request.user_name.strip(),
+                        date=entry_data.date,
+                        location=entry_data.location,
+                        time_period=time_period_value,
+                        client=entry_data.client,
+                        notes=entry_data.notes,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    session.add(new_entry)
                 count += 1
-        
+
         # Single commit for all operations (atomic)
         session.commit()
         
@@ -539,6 +472,9 @@ def delete_user_week(
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD") from e
 
+    if start_date.weekday() != 0:
+        raise HTTPException(status_code=400, detail="week_start must be a Monday")
+
     user_key = user_name.strip().lower()
 
     try:
@@ -567,9 +503,9 @@ def delete_user_week(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.delete("/entries/{entry_id}")
+@app.delete("/entries/{entry_id}", dependencies=[Depends(require_admin)])
 def delete_entry(entry_id: int, session: Session = Depends(get_session)):
-    """Delete a specific entry by ID."""
+    """Delete a specific entry by ID. Admin/utility only — not called by the frontend."""
     logger.info(f"Delete entry request for ID: {entry_id}")
 
     try:
@@ -756,7 +692,7 @@ def check_existing_entries(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/admin/migrate-locations")
+@app.post("/admin/migrate-locations", dependencies=[Depends(require_admin)])
 def migrate_locations(session: Session = Depends(get_session)):
     """Migrate old location names to new ones."""
     logger.info("Starting location migration")
@@ -802,7 +738,7 @@ def migrate_locations(session: Session = Depends(get_session)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/admin/debug")
+@app.get("/admin/debug", dependencies=[Depends(require_admin)])
 def debug_database(session: Session = Depends(get_session)):
     """Debug endpoint to check database contents and connection."""
     try:

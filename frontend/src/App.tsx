@@ -299,7 +299,7 @@ function App() {
   // Overwrite confirmation + undo
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
   const [isOverwriteConfirmed, setIsOverwriteConfirmed] = useState(false)
-  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}>>([])
+  const [backupBeforeSave, setBackupBeforeSave] = useState<Array<{date: string; location: string; time_period?: string | null; client?: string | null; notes?: string | null}>>([])
   const [showUndoBar, setShowUndoBar] = useState(false)
 
   // Runtime-loaded config
@@ -960,7 +960,7 @@ function App() {
       // Backup current entries from DB (for undo) if we are overwriting. Fetched fresh
       // here rather than reused from the existing-entries check, since that check is
       // debounced and could be stale relative to what's actually about to be overwritten.
-      let backup: Array<{date: string; location: string; time_period?: string | null; client?: string; notes?: string}> = []
+      let backup: Array<{date: string; location: string; time_period?: string | null; client?: string | null; notes?: string | null}> = []
       if (existingEntriesCount > 0) {
         try {
           const current = await getUserEntriesForWeek(userName.trim(), formatDate(weekStart))

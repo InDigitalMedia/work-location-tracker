@@ -16,7 +16,7 @@ John Doe: "What's the work tracker link?"
 You: "Here it is: https://your-app.vercel.app"
 John: *Opens link*
      *Enters name: "John Doe"*
-     *Selects Office/WFH/Client for each day*
+     *Selects their location (Neal Street/WFH/Client Office/etc.) for each day*
      *Clicks "Save my week"*
      *Done!*
 ```

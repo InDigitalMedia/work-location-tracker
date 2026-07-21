@@ -1,12 +1,12 @@
 # Work Location Tracker
 
-A beautiful web application to track where your team members are working (Office, WFH, Client, PTO, Off) throughout the week.
+A beautiful web application to track where your team members are working (Neal Street, WFH, Client Office, Working From Abroad, Holiday, Other) throughout the week.
 
 ## 🌟 Features
 
 - 📊 **Beautiful black-themed UI** - modern and professional
 - 📅 **Week view dashboard** - see everyone's locations by day
-- 👥 **Grouped by location** - Office, WFH, Client, PTO, Off
+- 👥 **Grouped by location** - Neal Street, WFH, Client Office, Working From Abroad, Holiday, Other
 - 🔄 **Real-time updates** - instant save and refresh
 - 📱 **Mobile responsive** - works on all devices
 - 🆓 **100% free to use** - no costs, no accounts needed
@@ -128,7 +128,7 @@ npm run lint && npm run format
 
 - Submit work location for entire week at once
 - View team dashboard showing where everyone is each day
-- Support for Office, WFH, Client, PTO, and Off locations
-- Client name required when "Client" location is selected
+- Support for Neal Street, WFH, Client Office, Working From Abroad, Holiday, and Other locations
+- Client name required when "Client Office" or "Other" location is selected
 - Optional notes field for each day
 - Responsive design with accessible form controls
