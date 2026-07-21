@@ -2,8 +2,8 @@ export interface Entry {
   date: string
   location: string
   time_period?: string | null  // 'Morning', 'Afternoon', or null for full day
-  client?: string
-  notes?: string
+  client?: string | null
+  notes?: string | null
 }
 
 export interface BulkUpsertRequest {
@@ -21,8 +21,8 @@ export interface SummaryRow {
   date: string
   location: string
   time_period?: string | null  // 'Morning', 'Afternoon', or null for full day
-  client?: string
-  notes?: string
+  client?: string | null
+  notes?: string | null
 }
 
 export interface WeekSummaryResponse {
@@ -54,6 +54,6 @@ export interface ExistingEntry {
   date: string
   location: string
   time_period?: string | null
-  client?: string
-  notes?: string
+  client?: string | null
+  notes?: string | null
 }

@@ -1,6 +1,7 @@
 import {
   BulkUpsertRequest,
   BulkUpsertResponse,
+  ExistingEntry,
   WeekSummaryResponse,
 } from './types'
 
@@ -50,8 +51,8 @@ export async function getWeekSummary(
 export async function checkExistingEntries(
   userName: string,
   weekStart: string
-): Promise<{ exists: boolean; count: number; entries: any[] }> {
-  return apiCall<{ exists: boolean; count: number; entries: any[] }>(
+): Promise<{ exists: boolean; count: number; entries: ExistingEntry[] }> {
+  return apiCall<{ exists: boolean; count: number; entries: ExistingEntry[] }>(
     `/entries/check?user_name=${encodeURIComponent(userName)}&week_start=${weekStart}`
   )
 }
@@ -59,7 +60,7 @@ export async function checkExistingEntries(
 export async function getUserEntriesForWeek(
   userName: string,
   weekStart: string
-): Promise<any[]> {
+): Promise<ExistingEntry[]> {
   const result = await checkExistingEntries(userName, weekStart)
   return result.entries || []
 }
