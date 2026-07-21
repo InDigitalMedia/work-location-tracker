@@ -1160,7 +1160,13 @@ function App() {
         </button>
         <button
           className={`toggle-btn ${viewMode === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setViewMode('dashboard')}
+          onClick={() => {
+            setViewMode('dashboard')
+            // If we're already on this tab with data loaded, jump straight to
+            // today - otherwise the scroll-to-today effect picks it up once
+            // the week summary finishes loading.
+            todaySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+          }}
         >
           Who's where
         </button>
