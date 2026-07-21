@@ -283,8 +283,8 @@
   --save-hover-border: #ffffff;
   --save-hover-shadow: 0 4px 10px rgba(255, 255, 255, 0.15);
   --save-disabled-bg: #000000;
-  --save-disabled-text: #4a6a52;
-  --save-disabled-border: #1a3a22;
+  --save-disabled-text: #666666;
+  --save-disabled-border: #333333;
 
   --toast-bg: #000000;
   --toast-text: #ffffff;
@@ -1245,9 +1245,26 @@ h1, h2, h3, h4, h5, h6 {
 
 .day-nav-top-btn {
   margin-left: auto;
-  padding: 8px 14px;
-  font-size: 15px;
+  padding: 8px 16px;
+  font-size: 13px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--daynav-active-bg);
+  color: var(--daynav-active-text);
+  border-color: var(--daynav-active-border);
+}
+
+.day-nav-top-btn span {
+  font-size: 16px;
+}
+
+.day-nav-top-btn:hover {
+  background: var(--daynav-active-bg);
+  color: var(--daynav-active-text);
+  border-color: var(--daynav-active-border);
+  opacity: 0.85;
 }
 
 /* Attendance summary bar in each day section */

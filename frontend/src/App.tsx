@@ -245,19 +245,26 @@ function App() {
     }
   }, [viewMode, weekStart])
 
-  // Scroll to today's section when dashboard opens and entries are loaded
+  // Scroll to today's section whenever the dashboard finishes loading (keyed on
+  // `loading` transitioning to false, not summaryEntries.length - two different
+  // weeks can coincidentally have the same entry count, which would silently
+  // skip this effect if it depended on the count instead).
   useEffect(() => {
-    if (viewMode === 'dashboard' && summaryEntries.length > 0 && todaySectionRef.current) {
-      // Small delay to ensure DOM is fully rendered
-      setTimeout(() => {
+    if (viewMode !== 'dashboard' || loading) return
+    // Wait a couple of paint cycles so the day-section refs are attached and
+    // layout (including the sticky nav's height) has settled before scrolling -
+    // more reliable than a fixed setTimeout guess.
+    let rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         todaySectionRef.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
           inline: 'nearest'
         })
-      }, 100)
-    }
-  }, [viewMode, summaryEntries.length])
+      })
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [viewMode, weekStart, loading])
 
   // Check for existing entries when user name or week changes (debounced so typing
   // a name doesn't fire one request per keystroke)
@@ -1791,7 +1798,7 @@ function App() {
                   aria-label="Back to top"
                   title="Back to top"
                 >
-                  ↑
+                  <span aria-hidden="true">↑</span> Top
                 </button>
               </div>
 
