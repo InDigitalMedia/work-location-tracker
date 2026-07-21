@@ -212,6 +212,7 @@ function ClientSearchInput({
       {showDropdown && (
         <div
           className="user-dropdown"
+          role="listbox"
           style={{
             position: 'absolute',
             top: '100%',
@@ -230,11 +231,22 @@ function ClientSearchInput({
           {filtered.map((c, index, arr) => (
             <div
               key={c}
+              role="option"
+              aria-selected={c === value}
+              tabIndex={0}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setSearchTerm(c)
                 onSelect(c)
                 setShowDropdown(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSearchTerm(c)
+                  onSelect(c)
+                  setShowDropdown(false)
+                }
               }}
               style={{
                 padding: '12px 16px',
@@ -1240,19 +1252,9 @@ function App() {
           />
 
           <button
+            className="preset-btn"
             type="button"
             onClick={openNativeDatePicker}
-            style={{
-              padding: '12px 16px',
-              border: 'var(--border-input)',
-              background: 'var(--btn-bg)',
-              color: 'var(--btn-text)',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontWeight: 700,
-              letterSpacing: 1,
-              boxShadow: 'none'
-            }}
             aria-label="Open calendar to select week"
           >
             📅 Select week: {formatWeekRangeLabel(weekStart)}
@@ -1439,6 +1441,7 @@ function App() {
               {showUserDropdown && (
                 <div
                   className="user-dropdown"
+                  role="listbox"
                   style={{
                     position: 'absolute',
                     top: '100%',
@@ -1461,10 +1464,21 @@ function App() {
                     .map((user, index, filtered) => (
                       <div
                         key={index}
+                        role="option"
+                        aria-selected={user === userName}
+                        tabIndex={0}
                         onClick={() => {
                           setUserName(user)
                           setUserSearchTerm('')
                           setShowUserDropdown(false)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setUserName(user)
+                            setUserSearchTerm('')
+                            setShowUserDropdown(false)
+                          }
                         }}
                         onMouseDown={(e) => e.preventDefault()}
                         style={{
@@ -1647,7 +1661,7 @@ function App() {
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{formatFriendlyDate(entry.date)}</td>
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>{entry.dayName}</td>
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: 'var(--text-heading)', fontSize: '12px' }}>Morning</div>
+                            <div className="period-label">Morning</div>
                             {renderLocationSelect(entry.morningLocation, (loc) => handleLocationChange(index, loc, 'morning'))}
                           </td>
                           <td>
@@ -1660,11 +1674,11 @@ function App() {
                           </td>
                           <td>
                             <input
+                              className="notes-input"
                               type="text"
                               value={entry.morningNotes || ''}
                               onChange={(e) => handleNotesChange(index, e.target.value, 'morning')}
                               placeholder="Optional notes"
-                              style={{ width: '100%' }}
                             />
                           </td>
                           <td rowSpan={2} style={{ verticalAlign: 'top', paddingTop: '16px' }}>
@@ -1686,7 +1700,7 @@ function App() {
                         </tr>
                         <tr className="split-afternoon-row">
                           <td>
-                            <div style={{ fontWeight: '700', marginBottom: '4px', color: 'var(--text-heading)', fontSize: '12px' }}>Afternoon</div>
+                            <div className="period-label">Afternoon</div>
                             {renderLocationSelect(entry.afternoonLocation, (loc) => handleLocationChange(index, loc, 'afternoon'))}
                           </td>
                           <td>
@@ -1699,11 +1713,11 @@ function App() {
                           </td>
                           <td>
                             <input
+                              className="notes-input"
                               type="text"
                               value={entry.afternoonNotes || ''}
                               onChange={(e) => handleNotesChange(index, e.target.value, 'afternoon')}
                               placeholder="Optional notes"
-                              style={{ width: '100%' }}
                             />
                           </td>
                         </tr>
@@ -1728,6 +1742,7 @@ function App() {
                     </td>
                     <td>
                       <input
+                        className="notes-input"
                         type="text"
                         value={entry.notes}
                         onChange={(e) => handleNotesChange(index, e.target.value)}
@@ -1792,7 +1807,7 @@ function App() {
 
       {/* Undo bar after save */}
       {showUndoBar && (
-        <div className="toast">
+        <div className="toast toast-undo">
           Updated. <button className="preset-btn" onClick={handleUndo} type="button" style={{ marginLeft: 8 }}>Undo</button>
         </div>
       )}
@@ -1999,11 +2014,7 @@ function App() {
                       return (
                         <div className="location-group" style={{ marginTop: '16px', borderLeft: '3px solid var(--border-input-color)' }}>
                           <div className="location-group-title">
-                            <span className="location-badge" style={{
-                              background: 'var(--bg-muted)',
-                              border: '1px solid var(--border-input-color)',
-                              color: 'var(--text-muted)'
-                            }}>
+                            <span className="location-badge location-none">
                               Not Entered ({notEntered.length})
                             </span>
                           </div>
