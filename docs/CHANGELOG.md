@@ -22,9 +22,9 @@ The backend performs atomic per-day upserts instead of delete-then-insert:
 - Example display:
   ```
   Monday, January 15, 2024
-    [Office] - John, Alice, Bob
+    [Neal Street] - John, Alice, Bob
     [WFH] - Charlie, David  
-    [Client] - Emma (Client Name)
+    [Client Office] - Emma (Client Name)
   ```
 
 ---

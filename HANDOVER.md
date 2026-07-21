@@ -61,6 +61,8 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 - [x] Render backend is live under the new account with data intact — verified via API, not via the dashboard steps originally planned here.
 - [ ] Worth a manual dashboard check: confirm `DATABASE_URL` on the `api-a8uz` service is still linked via `fromDatabase` to `worktracker-db` (per `render.yaml`) rather than a hardcoded string, so future redeploys don't drift.
 
+**Hard rule:** do not delete or recreate the `worktracker-db` database at any point in this process — it holds all historical entries. Ownership/workspace changes keep the data; recreating the database from scratch would wipe it.
+
 ## Step 4 — Verify everything works end-to-end
 
 - [x] Live frontend (`https://in-office.vercel.app`) loads and its backend (`https://api-a8uz.onrender.com`) responds with real data — verified via API on 2026-07-20.

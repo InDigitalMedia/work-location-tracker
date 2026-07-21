@@ -6,7 +6,6 @@ This directory contains all documentation for the Work Location Tracker project.
 
 - **Root docs/** - Active guides and instructions
   - `HOW_TO_USE.md` - How to use the application
-  - `QUICK_START.md` - Getting started quickly
   - `RUNNING_GUIDE.md` - How to run the application
   - `SHARE_WITH_TEAM.md` - Instructions for sharing with your team
   - `IDEAS.md` - Future enhancement ideas
@@ -22,12 +21,13 @@ This directory contains all documentation for the Work Location Tracker project.
   - `CHECK_SETTINGS.md` - Settings configuration notes
   - `FIX_LOGIN_REQUIRED.md` - Login fixes
   - `LOCATION_OPTIONS_UPDATE.md` - Location options changes
+  - `QUICK_START_INITIAL_DEPLOYMENT.md` - Original Render/Vercel deployment walkthrough (superseded — see `HANDOVER.md` for current URLs)
   - `UPDATE_FIX_SUMMARY.md` - Update fix summaries
   - `VERCEL_FIX.md` - Vercel deployment fixes
 
 ## Quick Links
 
 - [How to Use](../README.md#usage) - Back to main README
-- [Quick Start Guide](QUICK_START.md) - Get started quickly
+- [Running Guide](RUNNING_GUIDE.md) - Run/deploy the app today
 - [Deployment Instructions](deployment/DEPLOY.md) - Deploy the app
 
