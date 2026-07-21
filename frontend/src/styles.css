@@ -247,7 +247,7 @@
   --shadow-header: 0 0 20px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.8);
   --shadow-panel: 0 0 10px rgba(255, 255, 255, 0.1);
   --shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-toast: 0 0 20px rgba(0, 255, 0, 0.4);
+  --shadow-toast: 0 0 20px rgba(255, 255, 255, 0.3);
 
   --accent-focus: #ffffff;
   --focus-ring: 0 0 15px rgba(255, 255, 255, 0.5);
@@ -287,8 +287,8 @@
   --save-disabled-border: #1a3a22;
 
   --toast-bg: #000000;
-  --toast-text: #00ff00;
-  --toast-border: #00ff00;
+  --toast-text: #ffffff;
+  --toast-border: #ffffff;
 
   --week-thead-bg: #1a1a1a;
   --week-thead-text: #888888;
@@ -353,9 +353,9 @@
   --pill-border: 1px solid rgba(255, 255, 255, 0.12);
   --pill-text: rgba(255, 255, 255, 0.45);
 
-  --greenpill-bg: rgba(0, 255, 0, 0.1);
-  --greenpill-border: #39ff14;
-  --greenpill-text: #39ff14;
+  --greenpill-bg: rgba(255, 255, 255, 0.08);
+  --greenpill-border: #ffffff;
+  --greenpill-text: #ffffff;
 
   --split-tint: rgba(184, 134, 11, 0.08);
   --split-border: #b8860b;
