@@ -384,22 +384,22 @@ def test_build_neal_street_tomorrow_message_ends_with_full_schedule_button():
 
 def test_build_neal_street_today_message_has_friendly_header():
     message = slack_views.build_neal_street_today_message([])
-    header_text = message["blocks"][0]["text"]["text"]
+    body_text = message["blocks"][0]["text"]["text"]
 
-    assert "Good morning" in header_text
-    assert "Neal Street today" in header_text
+    assert "Good morning team" in body_text
+    assert "Here's who's in the office today:" in body_text
 
 
 def test_build_neal_street_today_message_lists_names_below_the_header():
     directory = {"alice johnson": {"id": "U001", "real_name": "Alice Johnson"}}
     message = slack_views.build_neal_street_today_message(["Alice Johnson", "Ghost Person"], directory)
 
-    day_section_text = message["blocks"][2]["text"]["text"]
-    lines = day_section_text.split("\n")
+    body_text = message["blocks"][0]["text"]["text"]
+    header_line, _, names_line = body_text.partition("Here's who's in the office today:")
 
-    assert lines[0] == "*Today*"
-    assert "<@U001>" in lines[1]
-    assert "@Ghost Person" in lines[1]
+    assert "Good morning team" in header_line
+    assert "<@U001>" in names_line
+    assert "@Ghost Person" in names_line
 
 
 def test_build_neal_street_today_message_ends_with_full_schedule_button():

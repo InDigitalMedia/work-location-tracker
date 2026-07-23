@@ -435,10 +435,32 @@ def _build_single_day_neal_street_message(greeting: str, day_label: str, names: 
 
 
 def build_neal_street_today_message(names: list[str], directory: dict | None = None) -> dict:
-    """Same visual style as build_neal_street_week_message but for the single-day
-    9am same-day digest."""
-    greeting = ":wave: Good morning everyone! Here's who's at Neal Street today :point_down:"
-    return _build_single_day_neal_street_message(greeting, "Today", names, directory)
+    """The 9am same-day digest to the general channel -- deliberately simpler
+    than the week/tomorrow layout (no day label, no divider before the names)
+    per explicit wording request: greeting, blank line, "who's in" line, blank
+    line, bolded @mentions."""
+    directory = directory or {}
+    names_text = _format_names(names, directory)
+    text = f"Good morning team! ☕️\n\nHere's who's in the office today:\n\n*{names_text}*"
+
+    blocks = [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "See Full Schedule"},
+                    "url": TRACKER_URL,
+                    "action_id": ACTION_VIEW_FULL_SCHEDULE,
+                    "value": TRACKER_URL,
+                }
+            ],
+        },
+    ]
+
+    return {"text": "Good morning team! Here's who's in the office today", "blocks": blocks}
 
 
 def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
