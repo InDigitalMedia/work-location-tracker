@@ -71,7 +71,10 @@ app = FastAPI(title="Work Location Tracker API", version="1.0.0", lifespan=lifes
 # Add CORS middleware — restricted to known frontend origins (override/extend via
 # the comma-separated CORS_ORIGINS env var for other deploys) plus this Vercel
 # project's preview deployments, which get a unique per-branch/per-commit hostname
-# that can't be listed individually (e.g. work-location-tracker-git-<branch>-in-digital.vercel.app)
+# that can't be listed individually (e.g. in-office-git-<branch>-in-digital.vercel.app).
+# The prefix here is the Vercel PROJECT name (vercel.com/in-digital/in-office),
+# which is independent of the GitHub repo's name -- if either is renamed again,
+# this needs updating to match, or every future PR preview loses API access.
 _default_cors_origins = "https://in-office.vercel.app,http://localhost:5173,http://localhost:4173"
 allowed_origins = [
     origin.strip()
@@ -79,7 +82,7 @@ allowed_origins = [
     if origin.strip()
 ]
 _vercel_preview_origin_regex = os.getenv(
-    "CORS_ORIGIN_REGEX", r"^https://work-location-tracker-[a-z0-9-]+-in-digital\.vercel\.app$"
+    "CORS_ORIGIN_REGEX", r"^https://in-office-[a-z0-9-]+-in-digital\.vercel\.app$"
 )
 app.add_middleware(
     CORSMiddleware,

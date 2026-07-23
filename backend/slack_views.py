@@ -321,7 +321,7 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
     blocks = [
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": f"🏢 *Here's who's at Neal Street this week*"},
+            "text": {"type": "mrkdwn", "text": "*Here's who's at Neal Street this week*"},
         },
     ]
     for offset in range(5):

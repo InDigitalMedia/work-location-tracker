@@ -172,3 +172,19 @@ def test_root_endpoint(client):
     data = response.json()
     assert "message" in data
     assert "docs" in data
+
+
+def test_vercel_preview_cors_regex_matches_current_project_name():
+    """Regression test: this regex hardcodes the Vercel PROJECT name
+    (vercel.com/in-digital/in-office), which is independent of the GitHub
+    repo's name -- if either gets renamed again without updating this, every
+    future PR preview silently loses the ability to reach the API (this
+    already happened once with the old "work-location-tracker" project name)."""
+    import re
+
+    from app import _vercel_preview_origin_regex
+
+    assert re.match(_vercel_preview_origin_regex, "https://in-office-git-some-branch-in-digital.vercel.app")
+    assert re.match(_vercel_preview_origin_regex, "https://in-office-git-fix-thing-a1b2c3-in-digital.vercel.app")
+    assert not re.match(_vercel_preview_origin_regex, "https://in-office.vercel.app")  # production -- exact-match list, not this regex
+    assert not re.match(_vercel_preview_origin_regex, "https://evil.vercel.app")
