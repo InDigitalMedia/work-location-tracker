@@ -352,6 +352,36 @@ def test_build_neal_street_week_message_shows_every_name_no_truncation():
         assert f"@{name}" in blocks_text
 
 
+def test_build_neal_street_tomorrow_message_has_friendly_header():
+    message = slack_views.build_neal_street_tomorrow_message("2026-07-29", [])
+    header_text = message["blocks"][0]["text"]["text"]
+
+    assert "Good afternoon" in header_text
+    assert "Neal Street tomorrow" in header_text
+
+
+def test_build_neal_street_tomorrow_message_shows_day_and_mentions():
+    directory = {"alice johnson": {"id": "U001", "real_name": "Alice Johnson"}}
+    message = slack_views.build_neal_street_tomorrow_message(
+        "2026-07-29", ["Alice Johnson", "Ghost Person"], directory
+    )
+    blocks_text = json.dumps(message["blocks"])
+
+    assert "Wed 29" in blocks_text
+    assert "<@U001>" in blocks_text
+    assert "@Ghost Person" in blocks_text
+
+
+def test_build_neal_street_tomorrow_message_ends_with_full_schedule_button():
+    message = slack_views.build_neal_street_tomorrow_message("2026-07-29", [])
+    actions_block = message["blocks"][-1]
+
+    assert actions_block["type"] == "actions"
+    button = actions_block["elements"][0]
+    assert button["text"]["text"] == "See Full Schedule"
+    assert button["url"] == slack_views.TRACKER_URL
+
+
 # --- slack_routes._handle_location_change (live modal update) ----------------
 
 def test_handle_location_change_shows_client_field_and_preserves_other_days(monkeypatch):
