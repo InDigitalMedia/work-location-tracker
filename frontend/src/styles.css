@@ -63,6 +63,7 @@
   --logo-filter: none;
   --logo-filter-hover: none;
   --logo-border: none;
+  --logo-bg: transparent;
   --heading-shadow: none;
 
   /* Secondary / toggle / preset buttons */
@@ -256,9 +257,12 @@
 
   --logo-filter: brightness(1.1);
   --logo-filter-hover: brightness(1.2);
-  /* The logo has a solid black background -- without a border it visually
-     disappears into the dark theme's near-black page background. */
+  /* The logo is almost entirely black fill -- a border alone just outlines it
+     without giving the shape itself any contrast against the near-black page
+     background, so it still reads as "gone". A light background behind it
+     gives the actual black icon shape something to contrast against. */
   --logo-border: 1px solid var(--border-color);
+  --logo-bg: #ffffff;
   --heading-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
   --btn-bg: #000000;
@@ -437,8 +441,10 @@ h1, h2, h3, h4, h5, h6 {
   height: 66px;
   flex-shrink: 0;
   box-sizing: border-box;
+  padding: 6px;
   border: var(--logo-border);
   border-radius: 4px;
+  background: var(--logo-bg);
   filter: var(--logo-filter);
   transition: all 0.3s ease;
   object-fit: contain;
