@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 
 from pydantic import ValidationError
 
+import clients
 from schemas import EntryCreate
 
 VALID_LOCATIONS = ["Neal Street", "WFH", "Client Office", "Holiday", "Working From Abroad", "Other"]
@@ -29,11 +30,18 @@ CLIENT_TEXT_LOCATIONS = ("Client Office", "Other")
 WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
 LOCATION_ACTION_ID = "location"
+CLIENT_SELECT_ACTION_ID = "client_select"
+# Sentinel dropdown value for "not in the list, let me type it" -- deliberately
+# not a real client name so it can never collide with an actual clients.json entry.
+CUSTOM_CLIENT_VALUE = "__custom__"
 
 ACTION_SAME_AS_LAST_WEEK = "quickfill_same_as_last_week"
 ACTION_FILL_WEEK = "quickfill_fill_week"
 
 CALLBACK_ID_WEEK_MODAL = "log_week_modal"
+
+# Any block_id whose value changing should trigger a live modal re-render.
+DISPATCH_ACTION_IDS = (LOCATION_ACTION_ID, CLIENT_SELECT_ACTION_ID)
 
 
 def _day_date(week_start: str, offset: int) -> str:
@@ -83,10 +91,16 @@ def build_quickfill_message(week_start: str, has_split_last_week: bool = False) 
 
 
 def _build_day_blocks(week_start: str, day_state: dict) -> list:
-    """day_state: {offset: {"location": str|None, "text": str|None}}. The client/
-    description block for a day is only included when that day's location is
-    Client Office/Other -- this one function is the single source of truth for
-    that rule, used both when the modal first opens and every time it's
+    """day_state: {offset: {"location": str|None, "client_choice": str|None, "text": str|None}}.
+
+    - "Other" location: a plain free-text description block (client_{offset}).
+    - "Client Office" location: a dropdown of clients.json entries plus an
+      "Other (type below)" option (client_select_{offset}); choosing that reveals
+      a further custom-name text block (client_custom_{offset}).
+    - Anything else: no client-related block at all.
+
+    This one function is the single source of truth for which blocks exist given
+    the current state, used both when the modal first opens and every time it's
     live-updated, so rendering can't drift from what parse_week_submission expects."""
     blocks = []
     for offset in range(5):
@@ -115,12 +129,50 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
             }
         blocks.append(location_block)
 
-        if location in CLIENT_TEXT_LOCATIONS:
+        if location == "Client Office":
+            client_choice = state.get("client_choice")
+            options = [
+                {"text": {"type": "plain_text", "text": name}, "value": name}
+                for name in clients.get_clients()
+            ] + [{"text": {"type": "plain_text", "text": "Other (type below)"}, "value": CUSTOM_CLIENT_VALUE}]
+            select_block = {
+                "type": "input",
+                "block_id": f"client_select_{offset}",
+                "optional": True,
+                "dispatch_action": True,
+                "label": {"type": "plain_text", "text": "Client"},
+                "element": {
+                    "type": "static_select",
+                    "action_id": CLIENT_SELECT_ACTION_ID,
+                    "options": options,
+                },
+            }
+            if client_choice:
+                label = "Other (type below)" if client_choice == CUSTOM_CLIENT_VALUE else client_choice
+                select_block["element"]["initial_option"] = {
+                    "text": {"type": "plain_text", "text": label},
+                    "value": client_choice,
+                }
+            blocks.append(select_block)
+
+            if client_choice == CUSTOM_CLIENT_VALUE:
+                custom_block = {
+                    "type": "input",
+                    "block_id": f"client_custom_{offset}",
+                    "optional": True,
+                    "label": {"type": "plain_text", "text": "Client name"},
+                    "element": {"type": "plain_text_input", "action_id": "text"},
+                }
+                if state.get("text"):
+                    custom_block["element"]["initial_value"] = state["text"]
+                blocks.append(custom_block)
+
+        elif location == "Other":
             text_block = {
                 "type": "input",
                 "block_id": f"client_{offset}",
                 "optional": True,
-                "label": {"type": "plain_text", "text": "Client / description"},
+                "label": {"type": "plain_text", "text": "Description"},
                 "element": {"type": "plain_text_input", "action_id": "text"},
             }
             if state.get("text"):
@@ -132,21 +184,32 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
 
 def extract_day_state(values: dict) -> dict:
     """Reads the modal's current full state (all 5 days) out of a view's
-    state.values -- used both to rebuild blocks on a live location change and to
-    parse the final submission, so both paths agree on what's "currently set"."""
+    state.values -- used both to rebuild blocks on a live field change and to
+    parse the final submission, so both paths agree on what's "currently set".
+
+    Each block simply won't be in values if it isn't currently rendered (e.g. a
+    non-Client-Office day has no client_select_N) -- .get(...) throughout handles
+    that as "not set", which is the correct behavior either way."""
     day_state = {}
     for offset in range(5):
         location_field = values.get(f"day_{offset}", {}).get(LOCATION_ACTION_ID, {})
         selected = location_field.get("selected_option")
         location = selected["value"] if selected else None
 
-        # The client_N block simply won't be in values if it isn't currently
-        # rendered (e.g. the day isn't Client Office/Other) -- .get(...) handles
-        # that as "no text", which is the correct behavior either way.
-        text_field = values.get(f"client_{offset}", {}).get("text", {})
-        text = text_field.get("value")
+        client_choice = None
+        text = None
+        if location == "Client Office":
+            select_field = values.get(f"client_select_{offset}", {}).get(CLIENT_SELECT_ACTION_ID, {})
+            choice_selected = select_field.get("selected_option")
+            client_choice = choice_selected["value"] if choice_selected else None
+            if client_choice == CUSTOM_CLIENT_VALUE:
+                text = values.get(f"client_custom_{offset}", {}).get("text", {}).get("value")
+            else:
+                text = client_choice  # a real client name picked directly from the dropdown
+        elif location == "Other":
+            text = values.get(f"client_{offset}", {}).get("text", {}).get("value")
 
-        day_state[offset] = {"location": location, "text": text}
+        day_state[offset] = {"location": location, "client_choice": client_choice, "text": text}
     return day_state
 
 
@@ -202,8 +265,14 @@ def parse_week_submission(view: dict) -> tuple[list[EntryCreate], dict]:
         except ValidationError:
             # Client Office/Other require a client name -- EntryCreate's own
             # validator raises for that, but this offers Slack a friendlier,
-            # field-anchored inline error instead of a generic one.
-            errors[f"client_{offset}"] = "Client name/description is required for this location"
+            # field-anchored inline error instead of a generic one. Anchor it to
+            # whichever block is actually currently rendered for this day, or
+            # Slack will silently ignore an error pointed at a nonexistent block_id.
+            if location == "Client Office":
+                block_id = f"client_custom_{offset}" if state["client_choice"] == CUSTOM_CLIENT_VALUE else f"client_select_{offset}"
+            else:
+                block_id = f"client_{offset}"
+            errors[block_id] = "Client name/description is required for this location"
 
     return entries, errors
 

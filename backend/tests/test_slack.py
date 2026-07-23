@@ -12,11 +12,19 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+import clients
 import daily_notifications
 import slack_client
 import slack_directory
 import slack_routes
 import slack_views
+
+
+@pytest.fixture(autouse=True)
+def _stub_clients_list(monkeypatch):
+    """Every test in this module should be network-independent -- clients.py
+    otherwise makes a real HTTP call the first time it's used."""
+    monkeypatch.setattr(clients, "get_clients", lambda: ["Sky", "FT", "Mail"])
 
 
 # --- slack_client.verify_signature -----------------------------------------
@@ -86,18 +94,41 @@ def test_match_roster_exact_and_variance_and_unmatched():
 
 def _view_with(day_values: dict, week_start="2026-07-27", user_name="Test User") -> dict:
     """Build a minimal view_submission-shaped payload. day_values: {offset: (location, text)}.
-    Only includes a client_N key in values when the real modal would actually
-    render that block (location is Client Office/Other) -- accurately simulating
-    what Slack sends, since a day's client field simply isn't present in state
-    when it isn't currently shown."""
+    Only includes the relevant client block(s) when the real modal would actually
+    render them -- accurately simulating what Slack sends, since a block simply
+    isn't present in state when it isn't currently shown.
+
+    For "Client Office", `text` (if not None) simulates picking that value
+    directly from the dropdown (client_select_N's selected_option) -- for the
+    "type a custom name" flow, use _view_with_custom_client instead."""
     values = {}
     for offset in range(5):
         loc, text = day_values.get(offset, (None, None))
         values[f"day_{offset}"] = {
             "location": {"selected_option": {"value": loc} if loc else None}
         }
-        if loc in slack_views.CLIENT_TEXT_LOCATIONS:
+        if loc == "Client Office":
+            values[f"client_select_{offset}"] = {
+                slack_views.CLIENT_SELECT_ACTION_ID: {"selected_option": {"value": text} if text else None}
+            }
+        elif loc == "Other":
             values[f"client_{offset}"] = {"text": {"value": text}}
+    return {
+        "private_metadata": json.dumps({"week_start": week_start, "user_name": user_name}),
+        "state": {"values": values},
+    }
+
+
+def _view_with_custom_client(offset: int, custom_text: str | None, week_start="2026-07-27", user_name="Test User") -> dict:
+    """Simulates a Client Office day where "Other (type below)" was chosen in the
+    dropdown, with custom_text typed into the resulting client_custom_N block."""
+    values = {
+        f"day_{offset}": {"location": {"selected_option": {"value": "Client Office"}}},
+        f"client_select_{offset}": {
+            slack_views.CLIENT_SELECT_ACTION_ID: {"selected_option": {"value": slack_views.CUSTOM_CLIENT_VALUE}}
+        },
+        f"client_custom_{offset}": {"text": {"value": custom_text}},
+    }
     return {
         "private_metadata": json.dumps({"week_start": week_start, "user_name": user_name}),
         "state": {"values": values},
@@ -131,11 +162,31 @@ def test_parse_week_submission_some_days_blank():
 
 
 def test_parse_week_submission_client_office_blank_client_errors():
+    """Nothing picked in the dropdown at all -- error anchors to the select block."""
     view = _view_with({0: ("Client Office", None)})
     entries, errors = slack_views.parse_week_submission(view)
 
     assert entries == []
-    assert "client_0" in errors
+    assert "client_select_0" in errors
+
+
+def test_parse_week_submission_client_office_custom_blank_errors():
+    """"Other (type below)" chosen but left blank -- error anchors to the custom
+    text block, not the select (which does have a value)."""
+    view = _view_with_custom_client(0, custom_text=None)
+    entries, errors = slack_views.parse_week_submission(view)
+
+    assert entries == []
+    assert "client_custom_0" in errors
+
+
+def test_parse_week_submission_client_office_custom_name():
+    view = _view_with_custom_client(0, custom_text="Acme Ventures")
+    entries, errors = slack_views.parse_week_submission(view)
+
+    assert errors == {}
+    assert entries[0].location == "Client Office"
+    assert entries[0].client == "Acme Ventures"
 
 
 def test_parse_week_submission_non_client_location_has_no_text_capture():
@@ -152,37 +203,79 @@ def test_parse_week_submission_non_client_location_has_no_text_capture():
 
 # --- slack_views._build_day_blocks / extract_day_state (conditional client field) --
 
-def test_build_day_blocks_omits_client_block_for_non_client_locations():
+def test_build_day_blocks_client_office_shows_dropdown_not_custom_text_by_default():
+    """Picking a real client directly from the dropdown shouldn't reveal the
+    custom-name text block -- only "Other (type below)" should."""
+    day_state = {0: {"location": "Client Office", "client_choice": "Sky", "text": "Sky"}}
+    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
+
+    block_ids = [b["block_id"] for b in blocks]
+    assert "client_select_0" in block_ids
+    assert "client_custom_0" not in block_ids
+
+    select_block = next(b for b in blocks if b["block_id"] == "client_select_0")
+    option_values = [o["value"] for o in select_block["element"]["options"]]
+    assert "Sky" in option_values  # a real clients.json entry
+    assert slack_views.CUSTOM_CLIENT_VALUE in option_values  # the escape hatch
+    assert select_block["element"]["initial_option"]["value"] == "Sky"
+
+
+def test_build_day_blocks_client_office_custom_reveals_text_block():
+    day_state = {0: {"location": "Client Office", "client_choice": slack_views.CUSTOM_CLIENT_VALUE, "text": "Acme Ventures"}}
+    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
+
+    block_ids = [b["block_id"] for b in blocks]
+    assert "client_select_0" in block_ids
+    assert "client_custom_0" in block_ids
+
+    custom_block = next(b for b in blocks if b["block_id"] == "client_custom_0")
+    assert custom_block["element"]["initial_value"] == "Acme Ventures"
+
+
+def test_build_day_blocks_other_location_shows_plain_text_not_dropdown():
+    day_state = {0: {"location": "Other", "text": "Conference"}}
+    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
+
+    block_ids = [b["block_id"] for b in blocks]
+    assert "client_0" in block_ids
+    assert "client_select_0" not in block_ids
+
+    text_block = next(b for b in blocks if b["block_id"] == "client_0")
+    assert text_block["element"]["type"] == "plain_text_input"
+    assert text_block["element"]["initial_value"] == "Conference"
+
+
+def test_build_day_blocks_omits_any_client_field_for_non_client_locations():
     day_state = {0: {"location": "WFH", "text": None}, 1: {"location": "Neal Street", "text": None}}
     blocks = slack_views._build_day_blocks("2026-07-27", day_state)
 
     block_ids = [b["block_id"] for b in blocks]
     assert "day_0" in block_ids and "day_1" in block_ids
-    assert "client_0" not in block_ids and "client_1" not in block_ids
-
-
-def test_build_day_blocks_includes_client_block_for_client_office_and_other():
-    day_state = {0: {"location": "Client Office", "text": "Acme"}, 1: {"location": "Other", "text": None}}
-    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
-
-    block_ids = [b["block_id"] for b in blocks]
-    assert "client_0" in block_ids
-    assert "client_1" in block_ids
-
-    client_0 = next(b for b in blocks if b["block_id"] == "client_0")
-    assert client_0["element"]["initial_value"] == "Acme"
+    for prefix in ("client_", "client_select_", "client_custom_"):
+        assert f"{prefix}0" not in block_ids and f"{prefix}1" not in block_ids
 
 
 def test_extract_day_state_handles_missing_client_block():
-    """If a day's client_N key simply isn't in values (not currently rendered),
-    extract_day_state should read it as no text, not raise."""
+    """If a day's client block(s) simply aren't in values (not currently
+    rendered), extract_day_state should read them as no text, not raise."""
     values = {
         "day_0": {"location": {"selected_option": {"value": "WFH"}}},
-        # no client_0 key at all
+        # no client_0/client_select_0/client_custom_0 keys at all
     }
     day_state = slack_views.extract_day_state(values)
 
-    assert day_state[0] == {"location": "WFH", "text": None}
+    assert day_state[0] == {"location": "WFH", "client_choice": None, "text": None}
+
+
+def test_extract_day_state_resolves_custom_client_text():
+    values = {
+        "day_0": {"location": {"selected_option": {"value": "Client Office"}}},
+        "client_select_0": {slack_views.CLIENT_SELECT_ACTION_ID: {"selected_option": {"value": slack_views.CUSTOM_CLIENT_VALUE}}},
+        "client_custom_0": {"text": {"value": "Acme Ventures"}},
+    }
+    day_state = slack_views.extract_day_state(values)
+
+    assert day_state[0] == {"location": "Client Office", "client_choice": slack_views.CUSTOM_CLIENT_VALUE, "text": "Acme Ventures"}
 
 
 # --- slack_views.format_week_summary ------------------------------------------
@@ -241,8 +334,8 @@ def test_handle_location_change_shows_client_field_and_preserves_other_days(monk
     assert captured["view_hash"] == "hash123"
 
     block_ids = [b["block_id"] for b in captured["view"]["blocks"]]
-    assert "client_0" not in block_ids  # WFH -- no client field
-    assert "client_1" in block_ids       # Client Office -- client field shown
+    assert "client_select_0" not in block_ids  # WFH -- no client field
+    assert "client_select_1" in block_ids       # Client Office -- dropdown shown
 
     day_0_block = next(b for b in captured["view"]["blocks"] if b["block_id"] == "day_0")
     assert day_0_block["element"]["initial_option"]["value"] == "WFH"  # preserved
