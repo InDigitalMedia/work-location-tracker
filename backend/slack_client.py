@@ -108,13 +108,12 @@ def users_list() -> list[dict]:
     return members
 
 
-def respond_via_response_url(response_url: str, text: str, replace_original: bool = True) -> None:
+def respond_via_response_url(response_url: str, text: str, blocks: list | None = None, replace_original: bool = True) -> None:
     """Update the original interactive message in place via Slack's response_url."""
+    payload = {"text": text, "replace_original": replace_original}
+    if blocks is not None:
+        payload["blocks"] = blocks
     try:
-        httpx.post(
-            response_url,
-            json={"text": text, "replace_original": replace_original},
-            timeout=10,
-        )
+        httpx.post(response_url, json=payload, timeout=10)
     except Exception as e:
         logger.error(f"Failed to post to response_url: {e}")
