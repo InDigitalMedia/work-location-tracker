@@ -10,6 +10,8 @@ This app currently depends entirely on Shaz's personal accounts (GitHub, Vercel,
 
 > **Status update (2026-07-20):** All three legs are confirmed done, via different mechanisms than originally planned below (kept for historical context — see the corrected notes under each step). GitHub: repo is at `github.com/InDigitalMedia/work-location-tracker` (an org). Vercel: live production frontend is now `https://in-office.vercel.app`. Render: backend migrated to a new account under `media@indigital.marketing`, live at `https://api-a8uz.onrender.com`, and `/summary/all-users` confirms historical entries (including Shaz's) survived the migration — not a fresh empty database.
 >
+> **Update (2026-07-23):** GitHub repo renamed to `github.com/InDigitalMedia/in-office`, and the Vercel project renamed to match (`vercel.com/in-digital/in-office`) — the production URL `in-office.vercel.app` and Render backend are unaffected by either rename.
+>
 > The *old* pairing — `work-location-tracker.vercel.app` calling the now-suspended `work-location-tracker.onrender.com` — is dead and orphaned from Shaz's original manual setup. That's expected now that the app has moved to the URLs above; it initially looked like a live outage until this was clarified. Cleanup of the old Vercel project / Render service is still open (see Step 5).
 
 If Cam is using Claude Code, this doc is written so it can be handed the whole task — it can run the repo-side git commands and verification steps, but the actual account transfers on GitHub/Vercel/Render must be done by a human in each dashboard (Claude Code has no access to those accounts).
@@ -26,7 +28,7 @@ Shaz needs these to send the transfer/invite requests:
 
 - [x] Shaz: transferred the repo (destination ended up being the `InDigitalMedia` GitHub org rather than Cam's personal account).
 - [x] Cam: accepted the transfer.
-- [x] Cam: repo URL is now `github.com/InDigitalMedia/work-location-tracker`; local remote confirmed pointing there via `git remote -v`.
+- [x] Cam: repo URL is now `github.com/InDigitalMedia/in-office` (renamed 2026-07-23, was `work-location-tracker`); local remote confirmed pointing there via `git remote -v`.
 
 ## Step 2 — Vercel (frontend hosting)
 
@@ -76,6 +78,14 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 - [ ] Remove Shaz from the Render workspace/account (**Settings → People**) if he still has any access to the `media@indigital.marketing` Render account or workspace.
 
 > The weekly report email feature (SendGrid, `backend/report.py`, `/admin/send-weekly-report`) has been removed entirely — the site no longer sends any email, so there's nothing to transfer or re-key here.
+
+## Step 6 — Slack integration ownership (added 2026-07-23, after this doc was originally written)
+
+A Slack integration (`/log-week` slash command, daily reminders, Neal Street digest) was added after the original GitHub/Vercel/Render handover above. It's a **separate fourth leg of ownership** this doc didn't originally cover — full detail in `docs/SLACK_INTEGRATION.md`, summarized here:
+
+- [ ] The Slack app itself (api.slack.com/apps) lives under whichever Slack account created it — **this repo has no record of which account that is**. Confirm who has admin access (the app's **Collaborators** page, or ask a workspace admin) and add the new owner.
+- [ ] Confirm the new owner has Render dashboard access to `SLACK_BOT_TOKEN`/`SLACK_SIGNING_SECRET`/`SLACK_SCHEDULER_SECRET` (should already be covered by Step 3, just flagging these specific secrets are easy to overlook).
+- [ ] Confirm the new owner has access to this GitHub repo's **Settings → Secrets and variables → Actions**, where a copy of `SLACK_SCHEDULER_SECRET` is stored (Render and GitHub don't sync this value automatically).
 
 ## Not relevant — safe to ignore
 

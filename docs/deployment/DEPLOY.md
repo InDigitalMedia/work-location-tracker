@@ -1,4 +1,4 @@
-# 🚀 Deploy Your Work Location Tracker - Step by Step
+# 🚀 Deploy In Office - Step by Step
 
 ## ✅ What's Ready
 
@@ -14,7 +14,7 @@ Your app is now ready to deploy! All configuration files are created:
 
 1. Create a new repository on GitHub:
    - Go to: https://github.com/new
-   - Name: `work-location-tracker`
+   - Name: `in-office`
    - Description: "Team work location tracking app"
    - Set to **Public**
    - ✅ Check "Initialize with README"
@@ -23,10 +23,10 @@ Your app is now ready to deploy! All configuration files are created:
 2. Push your code to GitHub:
 
 ```bash
-cd /path/to/work-location-tracker
+cd /path/to/in-office
 
 # Add the GitHub remote (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/work-location-tracker.git
+git remote add origin https://github.com/YOUR_USERNAME/in-office.git
 
 # Push to GitHub
 git branch -M main
@@ -42,7 +42,7 @@ git push -u origin main
 1. **Go to Render**: https://render.com
 2. **Sign up** (use "Sign up with GitHub")
 3. **Click "New"** → **"Blueprint"**
-4. **Connect repository**: Search for `work-location-tracker`
+4. **Connect repository**: Search for `in-office`
 5. **Click the repository** and "Connect"
 6. **Render will detect** `render.yaml` automatically
 7. **Click "Apply"** and wait for deployment (~10 minutes)
@@ -57,7 +57,7 @@ git push -u origin main
 1. **Go to Vercel**: https://vercel.com
 2. **Sign up** (use "Sign up with GitHub")
 3. **Click "Add New Project"**
-4. **Import Git Repository**: Search for `work-location-tracker`
+4. **Import Git Repository**: Search for `in-office`
 5. **Click "Import"**
 6. **Configure Project**:
    - **Root Directory**: Leave as `/` (root)
@@ -132,7 +132,7 @@ After making changes:
 
 ```bash
 # Make your changes
-cd /path/to/work-location-tracker
+cd /path/to/in-office
 
 # Commit changes
 git add .

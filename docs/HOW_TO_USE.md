@@ -23,6 +23,10 @@ John: *Opens link*
 
 **That's it!** No Vercel account needed, no login, nothing!
 
+### Or via Slack
+
+Anyone in the Slack workspace can also type `/log-week` to fill in their week without leaving Slack — same six locations, no separate login. See `docs/SLACK_INTEGRATION.md` for setup/troubleshooting if it's not working for someone.
+
 ---
 
 ## 🔐 For You (The Admin)

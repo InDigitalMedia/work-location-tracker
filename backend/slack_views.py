@@ -56,6 +56,19 @@ def _day_label(week_start: str, offset: int) -> str:
     return f"{WEEKDAY_NAMES[offset]} {date_obj.day} {date_obj.strftime('%b')}"
 
 
+def _sub_label(week_start: str, offset: int, field_name: str) -> str:
+    """Label for a field nested under a specific day's location select. Slack's
+    Block Kit gives every input block's label the same fixed bold styling --
+    there's no way to actually indent/de-emphasize one relative to another --
+    so the day association has to be carried in the text itself. The "↳" plus
+    a short day reference is the closest approximation of "this is a sub-field
+    of the row above" that plain-text labels can convey."""
+    date_str = _day_date(week_start, offset)
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    short_day = f"{WEEKDAY_NAMES[offset][:3]} {date_obj.day}"
+    return f"↳ {field_name} ({short_day})"
+
+
 def build_quickfill_message(week_start: str, has_split_last_week: bool = False) -> dict:
     """Block Kit message body (blocks + fallback text) for the quick-fill prompt."""
     note = ""
@@ -141,7 +154,7 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
                 "block_id": f"client_select_{offset}",
                 "optional": True,
                 "dispatch_action": True,
-                "label": {"type": "plain_text", "text": "Client"},
+                "label": {"type": "plain_text", "text": _sub_label(week_start, offset, "Client")},
                 "element": {
                     "type": "static_select",
                     "action_id": CLIENT_SELECT_ACTION_ID,
@@ -161,7 +174,7 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
                     "type": "input",
                     "block_id": f"client_custom_{offset}",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "Client name"},
+                    "label": {"type": "plain_text", "text": _sub_label(week_start, offset, "Client name")},
                     "element": {"type": "plain_text_input", "action_id": "text"},
                 }
                 if state.get("text"):
@@ -173,7 +186,7 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
                 "type": "input",
                 "block_id": f"client_{offset}",
                 "optional": True,
-                "label": {"type": "plain_text", "text": "Description"},
+                "label": {"type": "plain_text", "text": _sub_label(week_start, offset, "Description")},
                 "element": {"type": "plain_text_input", "action_id": "text"},
             }
             if state.get("text"):

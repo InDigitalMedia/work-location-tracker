@@ -1,4 +1,4 @@
-# 🚀 Free Hosting Guide for Work Location Tracker
+# 🚀 Free Hosting Guide for In Office
 
 ## 🎯 **Recommended Setup: Vercel (Frontend) + Render (Backend)**
 
@@ -12,16 +12,16 @@
 
 1. Create a new repository on GitHub:
    - Go to https://github.com/new
-   - Name it: `work-location-tracker`
+   - Name it: `in-office`
    - Set it to **Public**
    - **Don't** initialize with README
 
 2. Push your code:
 ```bash
-cd /path/to/work-location-tracker
+cd /path/to/in-office
 
 # Add your GitHub repo as remote
-git remote add origin https://github.com/YOUR_USERNAME/work-location-tracker.git
+git remote add origin https://github.com/YOUR_USERNAME/in-office.git
 
 # Push to GitHub
 git branch -M main

@@ -5,20 +5,20 @@
 Get your app URL from Vercel dashboard:
 1. Go to https://vercel.com
 2. Click on your project
-3. Copy the deployment URL (e.g., `https://v2-work-location-tracker.vercel.app`)
+3. Copy the deployment URL (e.g., `https://in-office.vercel.app`)
 4. **Share this URL with your team!**
 
 ---
 
 ## 📨 Example Email to Your Team
 
-**Subject**: Work Location Tracker - Please Fill In Your Week
+**Subject**: In Office - Please Fill In Your Week
 
 ---
 
 Hi Team,
 
-We now have a Work Location Tracker to help us plan ahead!
+We now have In Office to help us plan ahead!
 
 **Link**: [Your Vercel URL here]
 

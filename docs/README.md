@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains all documentation for the Work Location Tracker project.
+This directory contains all documentation for the In Office project.
 
 ## Structure
 
@@ -8,17 +8,18 @@ This directory contains all documentation for the Work Location Tracker project.
   - `HOW_TO_USE.md` - How to use the application
   - `RUNNING_GUIDE.md` - How to run the application
   - `SHARE_WITH_TEAM.md` - Instructions for sharing with your team
+  - `SLACK_INTEGRATION.md` - Slack integration: setup, credentials, ownership handover, adding team members, troubleshooting
   - `IDEAS.md` - Future enhancement ideas
   - `CHANGELOG.md` - Project changes and updates
 
 - **docs/deployment/** - Deployment guides
   - `DEPLOY.md` - General deployment instructions
   - `DEPLOY_INSTRUCTIONS.md` - Detailed deployment steps
-  - `DEPLOYMENT_COMPLETE.md` - Deployment completion notes
   - `HOSTING_GUIDE.md` - Hosting platform setup
 
 - **docs/history/** - Historical notes and fixes
   - `CHECK_SETTINGS.md` - Settings configuration notes
+  - `DEPLOYMENT_COMPLETE_INITIAL.md` - Original "you're live!" deployment notes (superseded — see `HANDOVER.md` for current URLs)
   - `FIX_LOGIN_REQUIRED.md` - Login fixes
   - `LOCATION_OPTIONS_UPDATE.md` - Location options changes
   - `QUICK_START_INITIAL_DEPLOYMENT.md` - Original Render/Vercel deployment walkthrough (superseded — see `HANDOVER.md` for current URLs)
@@ -30,4 +31,5 @@ This directory contains all documentation for the Work Location Tracker project.
 - [How to Use](../README.md#usage) - Back to main README
 - [Running Guide](RUNNING_GUIDE.md) - Run/deploy the app today
 - [Deployment Instructions](deployment/DEPLOY.md) - Deploy the app
+- [Slack Integration](SLACK_INTEGRATION.md) - Setup, credentials, and handover for the Slack integration
 

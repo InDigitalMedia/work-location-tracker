@@ -1,7 +1,7 @@
-# 🚀 Quick Deployment Guide for Work Location Tracker
+# 🚀 Quick Deployment Guide for In Office
 
 ## Your Repository
-- GitHub: https://github.com/InDigitalMedia/work-location-tracker
+- GitHub: https://github.com/InDigitalMedia/in-office
 - You're ready to deploy!
 
 ---
@@ -11,7 +11,7 @@
 1. **Go to**: https://render.com
 2. **Sign up** (use GitHub)
 3. **Click "New" → "Web Service"**
-4. **Connect your GitHub account** and select `InDigitalMedia/work-location-tracker`
+4. **Connect your GitHub account** and select `InDigitalMedia/in-office`
 5. **Configure**:
    - Name: `work-tracker-api`
    - Region: Choose closest to you
@@ -31,7 +31,7 @@
 1. **Go to**: https://vercel.com
 2. **Sign up** (use GitHub)
 3. **Click "Add New Project"**
-4. **Import** your repository `InDigitalMedia/work-location-tracker`
+4. **Import** your repository `InDigitalMedia/in-office`
 5. **Configure**:
    - Root Directory: `frontend`
    - Framework Preset: Auto-detect (Vite)
