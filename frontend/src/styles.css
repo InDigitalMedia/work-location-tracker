@@ -437,7 +437,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .logo {
-  width: 90px;
+  /* Square box to match the logo image's actual 1:1 aspect ratio -- with a
+     non-square box, object-fit: contain still centers the square image
+     correctly, but leaves more empty space on two sides than the other two,
+     which reads as an uneven border/frame even though the border itself is
+     applied uniformly. */
+  width: 66px;
   height: 66px;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -989,8 +994,8 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .logo {
-    width: 60px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
   }
 
   .week-table,
