@@ -39,7 +39,18 @@ def verify_signature(timestamp: str, raw_body: bytes, signature: str, signing_se
     computed = "v0=" + hmac.new(
         secret.encode("utf-8"), base_string.encode("utf-8"), hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(computed, signature or "")
+    is_valid = hmac.compare_digest(computed, signature or "")
+    if not is_valid:
+        # Never log the secret or signature themselves. Length + whitespace
+        # detection is enough to catch the two most common misconfigurations
+        # (wrong value copied, or a stray trailing newline/space from paste)
+        # without exposing anything sensitive in logs.
+        logger.warning(
+            f"Slack signature mismatch -- configured secret length={len(secret)}, "
+            f"has_surrounding_whitespace={secret != secret.strip()}, "
+            f"signature_header_present={bool(signature)}"
+        )
+    return is_valid
 
 
 def _headers() -> dict:
