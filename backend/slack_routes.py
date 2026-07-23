@@ -304,3 +304,8 @@ def trigger_daily_notifications(force: bool = False, session: Session = Depends(
 @slack_router.post("/internal/slack/tomorrow-digest", dependencies=[Depends(require_scheduler)])
 def trigger_tomorrow_digest(force: bool = False, session: Session = Depends(get_session)):
     return daily_notifications.run_tomorrow_digest(session, force=force)
+
+
+@slack_router.post("/internal/slack/next-week-reminder", dependencies=[Depends(require_scheduler)])
+def trigger_next_week_reminder(force: bool = False, session: Session = Depends(get_session)):
+    return daily_notifications.run_next_week_reminder(session, force=force)

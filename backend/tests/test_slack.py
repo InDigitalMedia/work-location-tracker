@@ -559,3 +559,153 @@ def test_tomorrow_digest_force_bypasses_gate(monkeypatch):
     result = daily_notifications.run_tomorrow_digest(session=None, force=True)
     assert "skipped" not in result
     assert result["ok"] is True
+
+
+# --- daily_notifications next-week-reminder gate ------------------------------
+
+def _run_next_week_reminder_with_fixed_now(monkeypatch, fixed_dt):
+    fixed = _FixedDatetime(
+        fixed_dt.year, fixed_dt.month, fixed_dt.day,
+        fixed_dt.hour, fixed_dt.minute, tzinfo=fixed_dt.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    return daily_notifications.run_next_week_reminder(session=None)
+
+
+def test_next_week_reminder_gate_skips_non_friday(monkeypatch):
+    tuesday_2pm = datetime(2026, 7, 28, 14, 0, tzinfo=ZoneInfo("Europe/London"))
+    result = _run_next_week_reminder_with_fixed_now(monkeypatch, tuesday_2pm)
+    assert result == {"ok": True, "skipped": "not friday"}
+
+
+def test_next_week_reminder_gate_skips_off_hour(monkeypatch):
+    friday_9am = datetime(2026, 7, 31, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Friday
+    result = _run_next_week_reminder_with_fixed_now(monkeypatch, friday_9am)
+    assert result["skipped"] == "not target hour"
+    assert result["hour"] == 9
+
+
+def test_next_week_reminder_gate_passes_on_friday_afternoon(monkeypatch):
+    monkeypatch.setattr(daily_notifications.roster, "get_roster", lambda: [])
+    monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
+    friday_2pm = datetime(2026, 7, 31, 14, 0, tzinfo=ZoneInfo("Europe/London"))  # a Friday
+    result = _run_next_week_reminder_with_fixed_now(monkeypatch, friday_2pm)
+    assert "skipped" not in result
+    assert result["ok"] is True
+
+
+def test_next_week_reminder_force_bypasses_gate(monkeypatch):
+    monkeypatch.setattr(daily_notifications.roster, "get_roster", lambda: [])
+    monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
+    tuesday_2pm = datetime(2026, 7, 28, 14, 0, tzinfo=ZoneInfo("Europe/London"))
+    fixed = _FixedDatetime(
+        tuesday_2pm.year, tuesday_2pm.month, tuesday_2pm.day,
+        tuesday_2pm.hour, tuesday_2pm.minute, tzinfo=tuesday_2pm.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    result = daily_notifications.run_next_week_reminder(session=None, force=True)
+    assert "skipped" not in result
+    assert result["ok"] is True
+
+
+def test_next_week_reminder_targets_the_monday_after_next(monkeypatch):
+    monkeypatch.setattr(daily_notifications.roster, "get_roster", lambda: ["Alice"])
+    monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
+    captured = {}
+
+    def _fake_send(session, week_start, header_text=None):
+        captured["week_start"] = week_start
+        captured["header_text"] = header_text
+        return 0, []
+
+    monkeypatch.setattr(daily_notifications, "_send_quickfill_reminders", _fake_send)
+    friday_2pm = datetime(2026, 7, 31, 14, 0, tzinfo=ZoneInfo("Europe/London"))  # a Friday
+    _run_next_week_reminder_with_fixed_now(monkeypatch, friday_2pm)
+
+    assert captured["week_start"] == "2026-08-03"  # the Monday after next
+    assert "next week" in captured["header_text"]
+
+
+# --- daily_notifications test-mode restriction --------------------------------
+
+def test_resolve_digest_channel_returns_real_channel_when_test_mode_off(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "TEST_MODE_USER_NAME", None)
+    monkeypatch.setattr(daily_notifications, "SLACK_GENERAL_CHANNEL_ID", "C0REAL")
+    assert daily_notifications._resolve_digest_channel() == "C0REAL"
+
+
+def test_resolve_digest_channel_redirects_to_test_user_dm_when_test_mode_on(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "TEST_MODE_USER_NAME", "Cam Doherty")
+    monkeypatch.setattr(daily_notifications, "SLACK_GENERAL_CHANNEL_ID", "C0REAL")
+    directory = {"cam doherty": {"id": "U0CAM", "real_name": "Cam Doherty"}}
+    monkeypatch.setattr(daily_notifications.slack_client, "open_dm", lambda slack_id: f"DM-{slack_id}")
+
+    channel = daily_notifications._resolve_digest_channel(directory)
+
+    assert channel == "DM-U0CAM"
+
+
+def test_resolve_digest_channel_returns_none_when_test_user_not_in_directory(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "TEST_MODE_USER_NAME", "Cam Doherty")
+    assert daily_notifications._resolve_digest_channel({}) is None
+
+
+def test_restrict_to_test_mode_filters_to_just_that_person(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "TEST_MODE_USER_NAME", "Cam Doherty")
+    matched = {"Cam Doherty": "U0CAM", "Alice Johnson": "U0ALICE"}
+
+    restricted = daily_notifications._restrict_to_test_mode(matched)
+
+    assert restricted == {"Cam Doherty": "U0CAM"}
+
+
+def test_restrict_to_test_mode_is_a_noop_when_test_mode_off(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "TEST_MODE_USER_NAME", None)
+    matched = {"Cam Doherty": "U0CAM", "Alice Johnson": "U0ALICE"}
+
+    assert daily_notifications._restrict_to_test_mode(matched) == matched
+
+
+def test_build_quickfill_message_custom_header_overrides_default_and_fallback_text():
+    message = slack_views.build_quickfill_message("2026-08-03", header_text="Plan next week!")
+
+    assert message["blocks"][0]["text"]["text"].startswith("*Plan next week!*")
+    assert message["text"] == "Plan next week!"
+
+
+def test_build_quickfill_message_mention_is_prefixed_to_header_and_fallback():
+    message = slack_views.build_quickfill_message("2026-08-03", mention="<@U0CAM>")
+
+    header_text = message["blocks"][0]["text"]["text"]
+    assert header_text.startswith("*Hey <@U0CAM> — Don't forget to fill in your week!*")
+    assert message["text"].startswith("Hey <@U0CAM> — ")
+
+
+def test_send_quickfill_reminders_includes_recipient_mention(monkeypatch):
+    monkeypatch.setattr(daily_notifications.roster, "get_roster", lambda: ["Alice Johnson"])
+    monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
+    monkeypatch.setattr(
+        daily_notifications.queries, "get_last_week_entries_for_user", lambda session, user_key, week_start: {}
+    )
+    monkeypatch.setattr(
+        daily_notifications.slack_directory,
+        "build_directory",
+        lambda: {"alice johnson": {"id": "U0ALICE", "real_name": "Alice Johnson"}},
+    )
+    monkeypatch.setattr(daily_notifications.slack_client, "open_dm", lambda slack_id: f"DM-{slack_id}")
+
+    captured = {}
+
+    def _fake_post_message(channel, text, blocks=None):
+        captured["channel"] = channel
+        captured["text"] = text
+
+    monkeypatch.setattr(daily_notifications.slack_client, "post_message", _fake_post_message)
+
+    sent, unmatched = daily_notifications._send_quickfill_reminders(session=None, week_start="2026-08-03")
+
+    assert sent == 1
+    assert captured["channel"] == "DM-U0ALICE"
+    assert captured["text"].startswith("Hey <@U0ALICE> — ")

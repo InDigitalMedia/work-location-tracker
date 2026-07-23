@@ -30,3 +30,5 @@ services:
         value: "C0BJV5KDT4P"
       - key: SLACK_SCHEDULER_SECRET
         generateValue: true
+      - key: SLACK_TEST_MODE_USER_NAME
+        sync: false
