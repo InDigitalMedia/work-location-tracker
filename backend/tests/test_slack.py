@@ -451,6 +451,121 @@ def test_handle_location_change_shows_client_field_and_preserves_other_days(monk
     assert day_0_block["element"]["initial_option"]["value"] == "WFH"  # preserved
 
 
+# --- slack_routes._handle_block_action ACTION_SAME_AS_LAST_WEEK --------------
+
+class _FullEntry:
+    def __init__(self, location, client=None, notes=None):
+        self.location, self.client, self.notes = location, client, notes
+
+
+def test_same_as_last_week_opens_prefilled_confirmation_modal_instead_of_saving(monkeypatch):
+    """The whole point of this change: clicking "Same as last week" should let
+    the user review before it's saved, not save blind."""
+    monkeypatch.setattr(slack_routes, "_resolve_identity", lambda user_id: ("Alice Johnson", True))
+    monkeypatch.setattr(
+        slack_routes.queries,
+        "get_last_week_entries_for_user",
+        lambda session, user_key, week_start: {
+            0: {"full": _FullEntry("Neal Street"), "morning": None, "afternoon": None},
+            1: {"full": _FullEntry("WFH"), "morning": None, "afternoon": None},
+        },
+    )
+
+    saved = {"called": False}
+    monkeypatch.setattr(
+        slack_routes.entries_module, "upsert_entries", lambda *a, **kw: saved.update(called=True)
+    )
+
+    captured = {}
+    monkeypatch.setattr(
+        slack_client, "open_view", lambda trigger_id, view: captured.update(trigger_id=trigger_id, view=view)
+    )
+
+    payload = {
+        "actions": [{"action_id": slack_views.ACTION_SAME_AS_LAST_WEEK, "value": "2026-07-27"}],
+        "user": {"id": "U1"},
+        "trigger_id": "T123",
+        "response_url": "https://hooks.slack.com/fake",
+    }
+
+    response = slack_routes._handle_block_action(session=None, payload=payload)
+
+    assert response.status_code == 200
+    assert saved["called"] is False  # nothing saved yet -- only the modal opened
+    assert captured["trigger_id"] == "T123"
+    assert captured["view"]["title"]["text"] == "Same as last week"
+
+    day_0_block = next(b for b in captured["view"]["blocks"] if b.get("block_id") == "day_0")
+    assert day_0_block["element"]["initial_option"]["value"] == "Neal Street"
+    day_1_block = next(b for b in captured["view"]["blocks"] if b.get("block_id") == "day_1")
+    assert day_1_block["element"]["initial_option"]["value"] == "WFH"
+
+
+def test_same_as_last_week_flags_a_skipped_split_day_in_the_modal(monkeypatch):
+    monkeypatch.setattr(slack_routes, "_resolve_identity", lambda user_id: ("Alice Johnson", True))
+    monkeypatch.setattr(
+        slack_routes.queries,
+        "get_last_week_entries_for_user",
+        lambda session, user_key, week_start: {
+            0: {"full": _FullEntry("Neal Street"), "morning": None, "afternoon": None},
+            1: {"full": None, "morning": "Neal Street", "afternoon": "WFH"},
+        },
+    )
+
+    captured = {}
+    monkeypatch.setattr(
+        slack_client, "open_view", lambda trigger_id, view: captured.update(view=view)
+    )
+
+    payload = {
+        "actions": [{"action_id": slack_views.ACTION_SAME_AS_LAST_WEEK, "value": "2026-07-27"}],
+        "user": {"id": "U1"},
+        "trigger_id": "T123",
+        "response_url": "https://hooks.slack.com/fake",
+    }
+
+    slack_routes._handle_block_action(session=None, payload=payload)
+
+    blocks_text = json.dumps(captured["view"]["blocks"])
+    assert "split" in blocks_text.lower()
+
+    day_0_block = next(b for b in captured["view"]["blocks"] if b.get("block_id") == "day_0")
+    assert day_0_block["element"]["initial_option"]["value"] == "Neal Street"
+
+    day_1_block = next(b for b in captured["view"]["blocks"] if b.get("block_id") == "day_1")
+    assert "initial_option" not in day_1_block["element"]  # split day couldn't be pre-filled -- left blank
+
+
+def test_same_as_last_week_with_no_full_day_entries_responds_without_opening_modal(monkeypatch):
+    monkeypatch.setattr(slack_routes, "_resolve_identity", lambda user_id: ("Alice Johnson", True))
+    monkeypatch.setattr(
+        slack_routes.queries, "get_last_week_entries_for_user", lambda session, user_key, week_start: {}
+    )
+
+    open_view_called = {"called": False}
+    monkeypatch.setattr(
+        slack_client, "open_view", lambda trigger_id, view: open_view_called.update(called=True)
+    )
+
+    responded = {}
+    monkeypatch.setattr(
+        slack_client, "respond_via_response_url", lambda url, text, **kw: responded.update(text=text)
+    )
+
+    payload = {
+        "actions": [{"action_id": slack_views.ACTION_SAME_AS_LAST_WEEK, "value": "2026-07-27"}],
+        "user": {"id": "U1"},
+        "trigger_id": "T123",
+        "response_url": "https://hooks.slack.com/fake",
+    }
+
+    response = slack_routes._handle_block_action(session=None, payload=payload)
+
+    assert response.status_code == 200
+    assert open_view_called["called"] is False
+    assert "Fill in week" in responded["text"]
+
+
 def test_handle_block_action_url_button_does_not_crash():
     """Regression test: Slack sends a block_actions payload to our Request URL
     even for a "url"-only button (it also opens the link client-side) -- this
@@ -461,7 +576,7 @@ def test_handle_block_action_url_button_does_not_crash():
         "response_url": "https://hooks.slack.com/fake",
     }
 
-    response = slack_routes._handle_block_action(session=None, payload=payload, background_tasks=None)
+    response = slack_routes._handle_block_action(session=None, payload=payload)
 
     assert response.status_code == 200
 
@@ -471,7 +586,7 @@ def test_handle_block_action_unknown_action_id_does_not_crash():
     should ack cleanly rather than raising."""
     payload = {"actions": [{"action_id": "something_we_dont_recognize"}], "user": {"id": "U1"}}
 
-    response = slack_routes._handle_block_action(session=None, payload=payload, background_tasks=None)
+    response = slack_routes._handle_block_action(session=None, payload=payload)
 
     assert response.status_code == 200
 

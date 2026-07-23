@@ -5,7 +5,7 @@ Included into app.py via app.include_router(slack_router).
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
@@ -21,7 +21,6 @@ import slack_client
 import slack_directory
 import slack_views
 from db import get_session
-from schemas import EntryCreate
 
 logger = logging.getLogger(__name__)
 
@@ -63,17 +62,30 @@ def _resolve_identity(slack_user_id: str) -> tuple[str, bool]:
     return real_name, False
 
 
+def _prefill_entry_from_row(row) -> dict:
+    """{"location": str, "client_choice": str|None, "text": str} for one saved
+    entry (an Entry row, or the "full" slot from get_last_week_entries_for_user
+    -- both expose .location/.client/.notes). client_choice must be set too
+    (not just text) -- _build_day_blocks uses client_choice, not text, to decide
+    the dropdown's initial_option and whether to show the custom-name field. A
+    previously saved client that isn't in the predefined list is treated as the
+    custom "Other (type below)" choice, so its name still round-trips correctly."""
+    entry = {"location": row.location, "client_choice": None, "text": ""}
+    if row.location == "Client Office":
+        client_value = row.client or ""
+        entry["client_choice"] = client_value if client_value in clients.get_clients() else slack_views.CUSTOM_CLIENT_VALUE
+        entry["text"] = client_value
+    elif row.location == "Other":
+        entry["text"] = row.client or ""
+    else:
+        entry["text"] = row.notes or ""
+    return entry
+
+
 def _build_prefill(session: Session, user_key: str, week_start: str) -> dict:
     """{offset: {"location": str, "client_choice": str|None, "text": str}} for
     this user's existing full-day entries this week, for pre-filling the modal.
-    Split-day entries are skipped (full-day-only scope).
-
-    For a Client Office day, client_choice must be set too (not just text) --
-    _build_day_blocks uses client_choice, not text, to decide the dropdown's
-    initial_option and whether to show the custom-name field. A previously
-    saved client that isn't in the predefined list is treated as the custom
-    "Other (type below)" choice, so its name still round-trips correctly.
-    """
+    Split-day entries are skipped (full-day-only scope)."""
     start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
     prefill = {}
     for row in queries.get_week_entries(session, week_start):
@@ -85,23 +97,29 @@ def _build_prefill(session: Session, user_key: str, week_start: str) -> dict:
         offset = (row_date - start_date).days
         if not (0 <= offset <= 4):
             continue
-
-        entry = {"location": row.location, "client_choice": None, "text": ""}
-        if row.location == "Client Office":
-            client_value = row.client or ""
-            entry["client_choice"] = client_value if client_value in clients.get_clients() else slack_views.CUSTOM_CLIENT_VALUE
-            entry["text"] = client_value
-        elif row.location == "Other":
-            entry["text"] = row.client or ""
-        else:
-            entry["text"] = row.notes or ""
-        prefill[offset] = entry
+        prefill[offset] = _prefill_entry_from_row(row)
     return prefill
 
 
-def _offset_date(week_start: str, offset: int) -> str:
-    start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
-    return (start_date + timedelta(days=offset)).strftime("%Y-%m-%d")
+def _build_prefill_from_last_week(session: Session, user_key: str, week_start: str) -> tuple[dict, bool]:
+    """Same prefill shape as _build_prefill, but sourced from last week's
+    full-day entries instead of this week's -- used to pre-populate the
+    "Same as last week" confirmation modal so the user can review before
+    saving, rather than saving blind. Returns (prefill, skipped_split) --
+    skipped_split flags that a split day last week couldn't be represented in
+    the full-day-only modal and was left blank."""
+    last_week = queries.get_last_week_entries_for_user(session, user_key, week_start)
+    prefill = {}
+    skipped_split = False
+    for offset, slot in last_week.items():
+        if slot["morning"] or slot["afternoon"]:
+            skipped_split = True
+            continue
+        full = slot["full"]
+        if not full:
+            continue
+        prefill[offset] = _prefill_entry_from_row(full)
+    return prefill, skipped_split
 
 
 def _current_week_start() -> str:
@@ -148,7 +166,7 @@ async def slack_interactivity(
     payload_type = payload.get("type")
 
     if payload_type == "block_actions":
-        return _handle_block_action(session, payload, background_tasks)
+        return _handle_block_action(session, payload)
     if payload_type == "view_submission":
         return _handle_view_submission(session, payload, background_tasks)
 
@@ -156,7 +174,7 @@ async def slack_interactivity(
     return Response(status_code=200)
 
 
-def _handle_block_action(session: Session, payload: dict, background_tasks: BackgroundTasks) -> Response:
+def _handle_block_action(session: Session, payload: dict) -> Response:
     action = payload["actions"][0]
     action_id = action.get("action_id")
 
@@ -190,41 +208,22 @@ def _handle_block_action(session: Session, payload: dict, background_tasks: Back
         return Response(status_code=200)
 
     if action_id == slack_views.ACTION_SAME_AS_LAST_WEEK:
-        last_week = queries.get_last_week_entries_for_user(session, user_key, week_start)
-        entries_list = []
-        skipped_split = False
-        for offset, slot in last_week.items():
-            if slot["morning"] or slot["afternoon"]:
-                skipped_split = True
-                continue
-            full = slot["full"]
-            if not full:
-                continue
-            kwargs = {"date": _offset_date(week_start, offset), "location": full.location}
-            if full.location in ("Client Office", "Other"):
-                kwargs["client"] = full.client
-            else:
-                kwargs["notes"] = full.notes
-            entries_list.append(EntryCreate(**kwargs))
-
-        if not entries_list:
+        # Opens the same modal used everywhere else, pre-filled from last
+        # week's entries, so the user reviews and explicitly submits rather
+        # than having a week saved without ever seeing it -- the normal
+        # view_submission path (upsert + confirmation DM + week summary)
+        # handles the rest exactly as it does for "Fill in week".
+        prefill, skipped_split = _build_prefill_from_last_week(session, user_key, week_start)
+        if not prefill:
             if response_url:
                 slack_client.respond_via_response_url(response_url, "No matching full-day entries found last week -- try Fill in week instead.")
             return Response(status_code=200)
 
-        try:
-            entries_module.upsert_entries(session, resolved_name, entries_list)
-            note = " (a split day last week was skipped -- set it via Fill in week)" if skipped_split else ""
-            if response_url:
-                slack_client.respond_via_response_url(response_url, f"✅ Week successfully entered!{note}")
-                # Building the Neal Street summary needs the Slack directory
-                # (users.list), which can be slow on a cold cache -- defer it so
-                # this handler's own ack isn't at risk of the same kind of
-                # 3-second timeout the slash command hit before.
-                background_tasks.add_task(_send_week_summary, session, response_url, week_start)
-        except ValueError as e:
-            if response_url:
-                slack_client.respond_via_response_url(response_url, f"❌ Something went wrong, week not saved: {e}")
+        note = None
+        if skipped_split:
+            note = "_A split (half) day from last week couldn't be pre-filled -- set it manually below if needed._"
+        view = slack_views.build_week_modal(week_start, resolved_name, prefill, title="Same as last week", note=note)
+        slack_client.open_view(trigger_id, view)
         return Response(status_code=200)
 
     return Response(status_code=200)
@@ -237,7 +236,9 @@ def _handle_location_change(payload: dict) -> Response:
     view = payload["view"]
     metadata = json.loads(view["private_metadata"])
     day_state = slack_views.extract_day_state(view["state"]["values"])
-    updated_view = slack_views.rebuild_modal_view(metadata["week_start"], metadata["user_name"], day_state)
+    updated_view = slack_views.rebuild_modal_view(
+        metadata["week_start"], metadata["user_name"], day_state, title=metadata.get("title"), note=metadata.get("note")
+    )
     slack_client.update_view(view["id"], view.get("hash"), updated_view)
     return Response(status_code=200)
 
@@ -286,14 +287,6 @@ def _send_confirmation_dm(session: Session, user_id: str, week_start: str) -> No
         # let them know that specifically rather than silently dropping it.
         logger.error(f"Failed to send week summary DM: {e}")
         slack_client.post_message(dm_channel, "⚠️ (Couldn't load the who's-where-this-week summary right now.)")
-
-
-def _send_week_summary(session: Session, response_url: str, week_start: str) -> None:
-    try:
-        message = _build_week_summary_message(session, week_start)
-        slack_client.respond_via_response_url(response_url, message["text"], blocks=message["blocks"], replace_original=False)
-    except Exception as e:
-        logger.error(f"Failed to send week summary: {e}")
 
 
 @slack_router.post("/internal/slack/daily-notifications", dependencies=[Depends(require_scheduler)])

@@ -238,24 +238,42 @@ def extract_day_state(values: dict) -> dict:
     return day_state
 
 
-def build_week_modal(week_start: str, user_name: str, prefill: dict | None = None) -> dict:
-    """prefill: {offset: {"location": str, "text": str}} for pre-filling from existing entries."""
+def build_week_modal(
+    week_start: str, user_name: str, prefill: dict | None = None, title: str | None = None, note: str | None = None
+) -> dict:
+    """prefill: {offset: {"location": str, "text": str}} for pre-filling from existing entries.
+    title overrides the modal's title (Slack caps plain_text titles at 24 chars).
+    note, if given, renders as a leading text block above the day fields -- used
+    by "Same as last week" to flag anything that couldn't be carried over."""
+    blocks = _build_day_blocks(week_start, prefill or {})
+    if note:
+        blocks = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": note}},
+            {"type": "divider"},
+        ] + blocks
+
     return {
         "type": "modal",
         "callback_id": CALLBACK_ID_WEEK_MODAL,
-        "private_metadata": json.dumps({"week_start": week_start, "user_name": user_name}),
-        "title": {"type": "plain_text", "text": "Log your week"},
+        "private_metadata": json.dumps(
+            {"week_start": week_start, "user_name": user_name, "title": title, "note": note}
+        ),
+        "title": {"type": "plain_text", "text": title or "Log your week"},
         "submit": {"type": "plain_text", "text": "Save Week"},
         "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": _build_day_blocks(week_start, prefill or {}),
+        "blocks": blocks,
     }
 
 
-def rebuild_modal_view(week_start: str, user_name: str, day_state: dict) -> dict:
+def rebuild_modal_view(
+    week_start: str, user_name: str, day_state: dict, title: str | None = None, note: str | None = None
+) -> dict:
     """Same view shape as build_week_modal, but built from the modal's own live
     state (day_state from extract_day_state) rather than DB prefill -- used when
-    responding to a location-select change with views.update."""
-    return build_week_modal(week_start, user_name, prefill=day_state)
+    responding to a location-select change with views.update. title/note are
+    carried over from the original private_metadata so a "Same as last week"
+    confirmation modal keeps its title/note across live field-change updates."""
+    return build_week_modal(week_start, user_name, prefill=day_state, title=title, note=note)
 
 
 def parse_week_submission(view: dict) -> tuple[list[EntryCreate], dict]:
