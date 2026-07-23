@@ -281,7 +281,8 @@ def parse_week_submission(view: dict) -> tuple[list[EntryCreate], dict]:
 TRACKER_URL = os.getenv("TRACKER_URL", "https://in-office.vercel.app")
 
 _ORDINAL_SUFFIXES = {1: "st", 2: "nd", 3: "rd"}
-_MAX_NAMES_SHOWN = 5
+
+ACTION_VIEW_FULL_SCHEDULE = "view_full_schedule"
 
 
 def _ordinal_day(day: int) -> str:
@@ -304,12 +305,7 @@ def _format_names(names: list[str], directory: dict) -> str:
     unique_sorted = sorted(set(names))
     if not unique_sorted:
         return "_No one going_"
-    shown = unique_sorted[:_MAX_NAMES_SHOWN]
-    rest = len(unique_sorted) - len(shown)
-    text = "  ".join(_mention(n, directory) for n in shown)
-    if rest > 0:
-        text += f"  _{rest} other{'s' if rest != 1 else ''}_"
-    return text
+    return "  ".join(_mention(n, directory) for n in unique_sorted)
 
 
 def build_neal_street_week_message(week_entries: list, week_start: str, directory: dict | None = None) -> dict:
@@ -346,9 +342,15 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
         "type": "actions",
         "elements": [
             {
+                # Slack still sends a block_actions payload to our Request URL
+                # even for a "url" button -- action_id/value are set so
+                # _handle_block_action can recognize and ignore it cleanly
+                # instead of crashing on a missing dict key.
                 "type": "button",
                 "text": {"type": "plain_text", "text": "See Full Schedule"},
                 "url": TRACKER_URL,
+                "action_id": ACTION_VIEW_FULL_SCHEDULE,
+                "value": TRACKER_URL,
             }
         ],
     })

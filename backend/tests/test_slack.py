@@ -338,7 +338,8 @@ def test_build_neal_street_week_message_mentions_matched_directory_entries():
     assert "@Ghost Person" in blocks_text  # unmatched -- falls back to plain text
 
 
-def test_build_neal_street_week_message_truncates_long_day_lists():
+def test_build_neal_street_week_message_shows_every_name_no_truncation():
+    """Explicitly requested: no "N others" truncation, list everyone."""
     directory = {}
     names = [f"Person{i}" for i in range(8)]
     week_entries = [_Row("2026-07-27", "Neal Street", n) for n in names]
@@ -346,7 +347,9 @@ def test_build_neal_street_week_message_truncates_long_day_lists():
     message = slack_views.build_neal_street_week_message(week_entries, "2026-07-27", directory)
     blocks_text = json.dumps(message["blocks"])
 
-    assert "3 others" in blocks_text
+    assert "others" not in blocks_text
+    for name in names:
+        assert f"@{name}" in blocks_text
 
 
 # --- slack_routes._handle_location_change (live modal update) ----------------
@@ -386,6 +389,31 @@ def test_handle_location_change_shows_client_field_and_preserves_other_days(monk
 
     day_0_block = next(b for b in captured["view"]["blocks"] if b["block_id"] == "day_0")
     assert day_0_block["element"]["initial_option"]["value"] == "WFH"  # preserved
+
+
+def test_handle_block_action_url_button_does_not_crash():
+    """Regression test: Slack sends a block_actions payload to our Request URL
+    even for a "url"-only button (it also opens the link client-side) -- this
+    caused a KeyError -> 500 when the button had no action_id/value set."""
+    payload = {
+        "actions": [{"action_id": slack_views.ACTION_VIEW_FULL_SCHEDULE, "value": slack_views.TRACKER_URL}],
+        "user": {"id": "U1"},
+        "response_url": "https://hooks.slack.com/fake",
+    }
+
+    response = slack_routes._handle_block_action(session=None, payload=payload, background_tasks=None)
+
+    assert response.status_code == 200
+
+
+def test_handle_block_action_unknown_action_id_does_not_crash():
+    """Defensive: any future/unexpected action_id (missing "value", etc.)
+    should ack cleanly rather than raising."""
+    payload = {"actions": [{"action_id": "something_we_dont_recognize"}], "user": {"id": "U1"}}
+
+    response = slack_routes._handle_block_action(session=None, payload=payload, background_tasks=None)
+
+    assert response.status_code == 200
 
 
 # --- daily_notifications DST-safe hour/weekday gate --------------------------

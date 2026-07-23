@@ -12,6 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
+import clients
 import daily_notifications
 import entries as entries_module
 import queries
@@ -63,9 +64,16 @@ def _resolve_identity(slack_user_id: str) -> tuple[str, bool]:
 
 
 def _build_prefill(session: Session, user_key: str, week_start: str) -> dict:
-    """{offset: {"location": str, "text": str}} for this user's existing full-day
-    entries this week, for pre-filling the modal. Split-day entries are skipped
-    (full-day-only scope)."""
+    """{offset: {"location": str, "client_choice": str|None, "text": str}} for
+    this user's existing full-day entries this week, for pre-filling the modal.
+    Split-day entries are skipped (full-day-only scope).
+
+    For a Client Office day, client_choice must be set too (not just text) --
+    _build_day_blocks uses client_choice, not text, to decide the dropdown's
+    initial_option and whether to show the custom-name field. A previously
+    saved client that isn't in the predefined list is treated as the custom
+    "Other (type below)" choice, so its name still round-trips correctly.
+    """
     start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
     prefill = {}
     for row in queries.get_week_entries(session, week_start):
@@ -75,9 +83,19 @@ def _build_prefill(session: Session, user_key: str, week_start: str) -> dict:
             continue  # split day -- not representable in the full-day-only modal
         row_date = datetime.strptime(row.date, "%Y-%m-%d").date()
         offset = (row_date - start_date).days
-        if 0 <= offset <= 4:
-            text_value = row.client if row.location in ("Client Office", "Other") else row.notes
-            prefill[offset] = {"location": row.location, "text": text_value or ""}
+        if not (0 <= offset <= 4):
+            continue
+
+        entry = {"location": row.location, "client_choice": None, "text": ""}
+        if row.location == "Client Office":
+            client_value = row.client or ""
+            entry["client_choice"] = client_value if client_value in clients.get_clients() else slack_views.CUSTOM_CLIENT_VALUE
+            entry["text"] = client_value
+        elif row.location == "Other":
+            entry["text"] = row.client or ""
+        else:
+            entry["text"] = row.notes or ""
+        prefill[offset] = entry
     return prefill
 
 
@@ -140,7 +158,7 @@ async def slack_interactivity(
 
 def _handle_block_action(session: Session, payload: dict, background_tasks: BackgroundTasks) -> Response:
     action = payload["actions"][0]
-    action_id = action["action_id"]
+    action_id = action.get("action_id")
 
     # A day's location select (or, for Client Office, its client dropdown)
     # changing inside an already-open modal -- rebuild its blocks (to show/hide
@@ -148,7 +166,17 @@ def _handle_block_action(session: Session, payload: dict, background_tasks: Back
     if action_id in slack_views.DISPATCH_ACTION_IDS:
         return _handle_location_change(payload)
 
-    week_start = action["value"]
+    # "See Full Schedule" is a url-type button -- Slack still sends us a
+    # block_actions payload for it (it just also opens the link client-side),
+    # but there's nothing for us to do with it. Any other action_id we don't
+    # recognize is handled the same defensive way: ack and move on, rather
+    # than assuming a "value"/"user" shape that a button like this doesn't have.
+    if action_id not in (slack_views.ACTION_FILL_WEEK, slack_views.ACTION_SAME_AS_LAST_WEEK):
+        if action_id != slack_views.ACTION_VIEW_FULL_SCHEDULE:
+            logger.warning(f"Unhandled block_actions action_id: {action_id}")
+        return Response(status_code=200)
+
+    week_start = action.get("value")
     user_id = payload["user"]["id"]
     response_url = payload.get("response_url")
     trigger_id = payload.get("trigger_id")
@@ -199,7 +227,6 @@ def _handle_block_action(session: Session, payload: dict, background_tasks: Back
                 slack_client.respond_via_response_url(response_url, f"❌ Something went wrong, week not saved: {e}")
         return Response(status_code=200)
 
-    logger.warning(f"Unhandled block_actions action_id: {action_id}")
     return Response(status_code=200)
 
 
