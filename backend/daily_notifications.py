@@ -105,27 +105,17 @@ def run_daily_notifications(session: Session, force: bool = False) -> dict:
 
 
 def _post_neal_street_digest(session: Session, week_start: str, today_str: str) -> int:
-    return _post_neal_street_digest_for_day(session, week_start, today_str, "today")
-
-
-def _post_neal_street_digest_for_day(session: Session, week_start: str, date_str: str, when_label: str) -> int:
-    channel = _resolve_digest_channel()
+    directory = slack_directory.build_directory()
+    channel = _resolve_digest_channel(directory)
     if not channel:
         return 0
 
     week_entries = queries.get_week_entries(session, week_start)
-    people = sorted({
-        row.user_name for row in week_entries
-        if row.date == date_str and row.location == "Neal Street"
-    })
+    names = [row.user_name for row in week_entries if row.date == today_str and row.location == "Neal Street"]
 
-    if people:
-        text = f"🏢 At Neal Street {when_label}: {', '.join(people)}"
-    else:
-        text = f"🏢 Nobody's logged as being at Neal Street {when_label}."
-
-    slack_client.post_message(channel, text)
-    return len(people)
+    message = slack_views.build_neal_street_today_message(names, directory)
+    slack_client.post_message(channel, message["text"], blocks=message["blocks"])
+    return len(set(names))
 
 
 def run_tomorrow_digest(session: Session, force: bool = False) -> dict:

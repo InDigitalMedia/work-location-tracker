@@ -238,24 +238,42 @@ def extract_day_state(values: dict) -> dict:
     return day_state
 
 
-def build_week_modal(week_start: str, user_name: str, prefill: dict | None = None) -> dict:
-    """prefill: {offset: {"location": str, "text": str}} for pre-filling from existing entries."""
+def build_week_modal(
+    week_start: str, user_name: str, prefill: dict | None = None, title: str | None = None, note: str | None = None
+) -> dict:
+    """prefill: {offset: {"location": str, "text": str}} for pre-filling from existing entries.
+    title overrides the modal's title (Slack caps plain_text titles at 24 chars).
+    note, if given, renders as a leading text block above the day fields -- used
+    by "Same as last week" to flag anything that couldn't be carried over."""
+    blocks = _build_day_blocks(week_start, prefill or {})
+    if note:
+        blocks = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": note}},
+            {"type": "divider"},
+        ] + blocks
+
     return {
         "type": "modal",
         "callback_id": CALLBACK_ID_WEEK_MODAL,
-        "private_metadata": json.dumps({"week_start": week_start, "user_name": user_name}),
-        "title": {"type": "plain_text", "text": "Log your week"},
+        "private_metadata": json.dumps(
+            {"week_start": week_start, "user_name": user_name, "title": title, "note": note}
+        ),
+        "title": {"type": "plain_text", "text": title or "Log your week"},
         "submit": {"type": "plain_text", "text": "Save Week"},
         "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": _build_day_blocks(week_start, prefill or {}),
+        "blocks": blocks,
     }
 
 
-def rebuild_modal_view(week_start: str, user_name: str, day_state: dict) -> dict:
+def rebuild_modal_view(
+    week_start: str, user_name: str, day_state: dict, title: str | None = None, note: str | None = None
+) -> dict:
     """Same view shape as build_week_modal, but built from the modal's own live
     state (day_state from extract_day_state) rather than DB prefill -- used when
-    responding to a location-select change with views.update."""
-    return build_week_modal(week_start, user_name, prefill=day_state)
+    responding to a location-select change with views.update. title/note are
+    carried over from the original private_metadata so a "Same as last week"
+    confirmation modal keeps its title/note across live field-change updates."""
+    return build_week_modal(week_start, user_name, prefill=day_state, title=title, note=note)
 
 
 def parse_week_submission(view: dict) -> tuple[list[EntryCreate], dict]:
@@ -382,28 +400,20 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
     return {"text": "Here's who's at Neal Street this week", "blocks": blocks}
 
 
-def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
-    """Same visual style as build_neal_street_week_message (header, divider, day
-    section, "See Full Schedule" button) but for the single-day 4pm heads-up."""
+def _build_single_day_neal_street_message(greeting: str, day_label: str, names: list[str], directory: dict | None = None) -> dict:
+    """Shared shape for a single-day Neal Street heads-up (today's 9am digest,
+    tomorrow's 4pm digest): greeting, divider, a day section with names on the
+    line below the 🏢 marker (always real @mentions via the Slack directory
+    when available), divider, "See Full Schedule" button."""
     directory = directory or {}
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-    weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
-    day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
-
     blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:",
-            },
-        },
+        {"type": "section", "text": {"type": "mrkdwn", "text": greeting}},
         {"type": "divider"},
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*{day_header}*\n🏢 {_format_names(names, directory)}",
+                "text": f"*{day_label}*\n🏢 {_format_names(names, directory)}",
             },
         },
         {"type": "divider"},
@@ -421,4 +431,43 @@ def build_neal_street_tomorrow_message(date_str: str, names: list[str], director
         },
     ]
 
-    return {"text": "Here's who's at Neal Street tomorrow", "blocks": blocks}
+    return {"text": greeting, "blocks": blocks}
+
+
+def build_neal_street_today_message(names: list[str], directory: dict | None = None) -> dict:
+    """The 9am same-day digest to the general channel -- deliberately simpler
+    than the week/tomorrow layout (no day label, no divider before the names)
+    per explicit wording request: greeting, blank line, "who's in" line, blank
+    line, bolded @mentions."""
+    directory = directory or {}
+    names_text = _format_names(names, directory)
+    text = f"Good morning team! ☕️\n\nHere's who's in the office today:\n\n*{names_text}*"
+
+    blocks = [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "See Full Schedule"},
+                    "url": TRACKER_URL,
+                    "action_id": ACTION_VIEW_FULL_SCHEDULE,
+                    "value": TRACKER_URL,
+                }
+            ],
+        },
+    ]
+
+    return {"text": "Good morning team! Here's who's in the office today", "blocks": blocks}
+
+
+def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
+    """Same visual style as build_neal_street_week_message but for the single-day
+    4pm heads-up."""
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
+    day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
+    greeting = ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:"
+    return _build_single_day_neal_street_message(greeting, day_header, names, directory)
