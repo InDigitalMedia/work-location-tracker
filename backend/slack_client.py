@@ -90,6 +90,18 @@ def open_view(trigger_id: str, view: dict) -> dict:
     return data
 
 
+def update_view(view_id: str, view_hash: str | None, view: dict) -> dict:
+    """Re-render an already-open modal (used for the conditional client field)."""
+    payload = {"view_id": view_id, "view": view}
+    if view_hash:
+        payload["hash"] = view_hash
+    resp = httpx.post(f"{SLACK_API_BASE}/views.update", headers=_headers(), json=payload, timeout=10)
+    data = resp.json()
+    if not data.get("ok"):
+        logger.error(f"views.update failed: {data}")
+    return data
+
+
 def users_info(user_id: str) -> dict | None:
     resp = httpx.get(f"{SLACK_API_BASE}/users.info", headers=_headers(), params={"user": user_id}, timeout=10)
     data = resp.json()

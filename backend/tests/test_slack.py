@@ -15,6 +15,7 @@ import pytest
 import daily_notifications
 import slack_client
 import slack_directory
+import slack_routes
 import slack_views
 
 
@@ -84,14 +85,19 @@ def test_match_roster_exact_and_variance_and_unmatched():
 # --- slack_views.parse_week_submission ---------------------------------------
 
 def _view_with(day_values: dict, week_start="2026-07-27", user_name="Test User") -> dict:
-    """Build a minimal view_submission-shaped payload. day_values: {offset: (location, text)}."""
+    """Build a minimal view_submission-shaped payload. day_values: {offset: (location, text)}.
+    Only includes a client_N key in values when the real modal would actually
+    render that block (location is Client Office/Other) -- accurately simulating
+    what Slack sends, since a day's client field simply isn't present in state
+    when it isn't currently shown."""
     values = {}
     for offset in range(5):
         loc, text = day_values.get(offset, (None, None))
         values[f"day_{offset}"] = {
             "location": {"selected_option": {"value": loc} if loc else None}
         }
-        values[f"client_{offset}"] = {"text": {"value": text}}
+        if loc in slack_views.CLIENT_TEXT_LOCATIONS:
+            values[f"client_{offset}"] = {"text": {"value": text}}
     return {
         "private_metadata": json.dumps({"week_start": week_start, "user_name": user_name}),
         "state": {"values": values},
@@ -132,14 +138,114 @@ def test_parse_week_submission_client_office_blank_client_errors():
     assert "client_0" in errors
 
 
-def test_parse_week_submission_notes_routing_for_non_client_location():
-    """A non-Client-Office/Other day's text field should map to notes, not client."""
-    view = _view_with({0: ("WFH", "working from the kitchen table")})
+def test_parse_week_submission_non_client_location_has_no_text_capture():
+    """A WFH/Neal Street/etc. day never renders a text block (the whole point of
+    the conditional field), so there's no way to capture notes for it via Slack
+    -- confirms this degrades to "no notes" rather than erroring."""
+    view = _view_with({0: ("WFH", "this text is never actually reachable via the real modal")})
     entries, errors = slack_views.parse_week_submission(view)
 
     assert errors == {}
     assert entries[0].client is None
-    assert entries[0].notes == "working from the kitchen table"
+    assert entries[0].notes is None
+
+
+# --- slack_views._build_day_blocks / extract_day_state (conditional client field) --
+
+def test_build_day_blocks_omits_client_block_for_non_client_locations():
+    day_state = {0: {"location": "WFH", "text": None}, 1: {"location": "Neal Street", "text": None}}
+    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
+
+    block_ids = [b["block_id"] for b in blocks]
+    assert "day_0" in block_ids and "day_1" in block_ids
+    assert "client_0" not in block_ids and "client_1" not in block_ids
+
+
+def test_build_day_blocks_includes_client_block_for_client_office_and_other():
+    day_state = {0: {"location": "Client Office", "text": "Acme"}, 1: {"location": "Other", "text": None}}
+    blocks = slack_views._build_day_blocks("2026-07-27", day_state)
+
+    block_ids = [b["block_id"] for b in blocks]
+    assert "client_0" in block_ids
+    assert "client_1" in block_ids
+
+    client_0 = next(b for b in blocks if b["block_id"] == "client_0")
+    assert client_0["element"]["initial_value"] == "Acme"
+
+
+def test_extract_day_state_handles_missing_client_block():
+    """If a day's client_N key simply isn't in values (not currently rendered),
+    extract_day_state should read it as no text, not raise."""
+    values = {
+        "day_0": {"location": {"selected_option": {"value": "WFH"}}},
+        # no client_0 key at all
+    }
+    day_state = slack_views.extract_day_state(values)
+
+    assert day_state[0] == {"location": "WFH", "text": None}
+
+
+# --- slack_views.format_week_summary ------------------------------------------
+
+def test_format_week_summary_groups_by_day_and_location():
+    class _Row:
+        def __init__(self, date, location, user_name):
+            self.date, self.location, self.user_name = date, location, user_name
+
+    week_entries = [
+        _Row("2026-07-27", "Neal Street", "Alice"),
+        _Row("2026-07-27", "Neal Street", "Bob"),
+        _Row("2026-07-27", "WFH", "Carol"),
+        _Row("2026-07-29", "Client Office", "Alice"),
+    ]
+
+    summary = slack_views.format_week_summary(week_entries, "2026-07-27")
+
+    assert "Monday" in summary and "Wednesday" in summary
+    assert "Neal Street - Alice, Bob" in summary
+    assert "WFH - Carol" in summary
+    assert "Client Office - Alice" in summary
+    # Tuesday had nothing -- should say so rather than being silently omitted
+    assert "No entries yet" in summary
+
+
+# --- slack_routes._handle_location_change (live modal update) ----------------
+
+def test_handle_location_change_shows_client_field_and_preserves_other_days(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(slack_client, "update_view", lambda view_id, view_hash, view: captured.update(
+        view_id=view_id, view_hash=view_hash, view=view
+    ))
+
+    # Simulate: day 0 already had WFH set (no client block), day 1 just got
+    # changed to "Client Office" with no text yet -- the resulting rebuilt view
+    # should show day 1's client block and still remember day 0's location.
+    payload = {
+        "view": {
+            "id": "V123",
+            "hash": "hash123",
+            "private_metadata": json.dumps({"week_start": "2026-07-27", "user_name": "Test User"}),
+            "state": {
+                "values": {
+                    "day_0": {"location": {"selected_option": {"value": "WFH"}}},
+                    "day_1": {"location": {"selected_option": {"value": "Client Office"}}},
+                }
+            },
+        }
+    }
+
+    response = slack_routes._handle_location_change(payload)
+
+    assert response.status_code == 200
+    assert captured["view_id"] == "V123"
+    assert captured["view_hash"] == "hash123"
+
+    block_ids = [b["block_id"] for b in captured["view"]["blocks"]]
+    assert "client_0" not in block_ids  # WFH -- no client field
+    assert "client_1" in block_ids       # Client Office -- client field shown
+
+    day_0_block = next(b for b in captured["view"]["blocks"] if b["block_id"] == "day_0")
+    assert day_0_block["element"]["initial_option"]["value"] == "WFH"  # preserved
 
 
 # --- daily_notifications DST-safe hour/weekday gate --------------------------
