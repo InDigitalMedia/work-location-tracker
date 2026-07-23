@@ -29,13 +29,19 @@ def monday_of(date_obj) -> str:
     return monday.strftime("%Y-%m-%d")
 
 
-def run_daily_notifications(session: Session) -> dict:
+def run_daily_notifications(session: Session, force: bool = False) -> dict:
+    """force=True skips the weekday/hour gate entirely -- used for manual test
+    runs (see slack_routes.py's trigger_daily_notifications), so someone can
+    actually see real messages sent on demand rather than the endpoint silently
+    no-opping outside the real 9am-London/weekday window. The scheduled GitHub
+    Actions cron never sets this -- only a human explicitly asking to force it."""
     now = datetime.now(LONDON_TZ)
 
-    if now.weekday() >= 5:
-        return {"ok": True, "skipped": "weekend"}
-    if now.hour != TARGET_HOUR:
-        return {"ok": True, "skipped": "not target hour", "hour": now.hour}
+    if not force:
+        if now.weekday() >= 5:
+            return {"ok": True, "skipped": "weekend"}
+        if now.hour != TARGET_HOUR:
+            return {"ok": True, "skipped": "not target hour", "hour": now.hour}
 
     today_str = now.strftime("%Y-%m-%d")
     week_start = monday_of(now.date())

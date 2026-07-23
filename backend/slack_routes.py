@@ -297,5 +297,5 @@ def _send_week_summary(session: Session, response_url: str, week_start: str) -> 
 
 
 @slack_router.post("/internal/slack/daily-notifications", dependencies=[Depends(require_scheduler)])
-def trigger_daily_notifications(session: Session = Depends(get_session)):
-    return daily_notifications.run_daily_notifications(session)
+def trigger_daily_notifications(force: bool = False, session: Session = Depends(get_session)):
+    return daily_notifications.run_daily_notifications(session, force=force)
