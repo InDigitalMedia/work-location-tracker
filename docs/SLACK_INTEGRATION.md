@@ -6,20 +6,23 @@ Lets people fill in their week and see who's at Neal Street without leaving Slac
 
 - **`/log-week` slash command** — opens a modal to fill in your week directly (Mon–Fri, one location per day, no morning/afternoon split — that's web-app-only). Re-running it pre-fills whatever you've already entered that week.
 - **Quick-fill buttons** ("🔁 Same as last week" / "✏️ Fill in week") — shown in the daily reminder DM (a bot can't open a modal without a fresh interaction, so the DM needs a button first; the slash command skips straight to the modal since it already has one).
-- **Daily reminder DM** — every weekday morning, anyone who hasn't filled in their week yet gets DMed the quick-fill buttons.
+- **Daily reminder DM** — every weekday morning, anyone who hasn't filled in their week yet gets DMed the quick-fill buttons, addressed to them by name (`Hey @Name — ...`).
 - **Daily Neal Street digest** — every weekday morning, a message goes to a configured channel listing who's at Neal Street that day.
-- **Tomorrow Neal Street digest** — every weekday afternoon (4pm London), a message goes to the same channel listing who's at Neal Street the next working day. Skipped on Fridays (tomorrow would be Saturday).
+- **Tomorrow Neal Street digest** — every weekday afternoon (4pm London), a message goes to the same channel listing who's at Neal Street the next working day, in the same day-by-day style as the week summary below. Skipped on Fridays (tomorrow would be Saturday).
+- **Next-week reminder DM** — every Friday afternoon (2pm London), anyone who hasn't yet entered *next* week's locations gets the same quick-fill buttons, reworded for next week. "Same as last week" here naturally means "same as this week", since it's relative to next week's Monday.
 - **Week summary** — after successfully saving (via the modal or "Same as last week"), you privately get an Officely-style breakdown of who's at Neal Street each day that week, with a "See Full Schedule" link back to the web app.
 
 ## Architecture (brief)
 
-- Backend: `backend/slack_routes.py` (the 4 HTTP endpoints), `backend/slack_views.py` (Block Kit message/modal building + parsing), `backend/slack_client.py` (thin Slack Web API wrapper + request signature verification), `backend/slack_directory.py` (matches `team-members.json` names against the Slack workspace directory), `backend/daily_notifications.py` (the scheduled jobs' logic).
-- The 4 endpoints, all under `app.include_router(slack_router)` in `backend/app.py`:
+- Backend: `backend/slack_routes.py` (the 5 HTTP endpoints), `backend/slack_views.py` (Block Kit message/modal building + parsing), `backend/slack_client.py` (thin Slack Web API wrapper + request signature verification), `backend/slack_directory.py` (matches `team-members.json` names against the Slack workspace directory), `backend/daily_notifications.py` (the scheduled jobs' logic).
+- The 5 endpoints, all under `app.include_router(slack_router)` in `backend/app.py`:
   - `POST /slack/commands` — the `/log-week` slash command
   - `POST /slack/interactivity` — button clicks, modal field changes, and modal submission all come through here
   - `POST /internal/slack/daily-notifications` — the 9am scheduler trigger (gated by its own secret, see below); accepts an optional `?force=true` query param that bypasses the weekday/hour gate, for manual test runs
   - `POST /internal/slack/tomorrow-digest` — the 4pm scheduler trigger; same gating and `?force=true` behavior
-- Scheduling: `.github/workflows/slack-daily.yml` (9am digest + reminders) and `.github/workflows/slack-tomorrow-digest.yml` (4pm tomorrow digest), each a GitHub Actions cron firing at **both** UTC-equivalents of the target London hour every weekday (08:00/09:00 UTC, and 15:00/16:00 UTC respectively). Each endpoint checks whether it's actually the target hour in London and no-ops on whichever firing doesn't match — this is deliberate, so the crons never need editing for BST/GMT. Both workflows also support manual "Run workflow" with a `force` checkbox to bypass the gate entirely.
+  - `POST /internal/slack/next-week-reminder` — the Friday-2pm scheduler trigger; same gating and `?force=true` behavior
+- Scheduling: `.github/workflows/slack-daily.yml` (9am digest + reminders), `.github/workflows/slack-tomorrow-digest.yml` (4pm tomorrow digest), and `.github/workflows/slack-next-week-reminder.yml` (Friday 2pm next-week reminder) — each a GitHub Actions cron firing at **both** UTC-equivalents of the target London hour (08:00/09:00, 15:00/16:00, and 13:00/14:00 UTC respectively). Each endpoint checks whether it's actually the target hour in London and no-ops on whichever firing doesn't match — this is deliberate, so the crons never need editing for BST/GMT. All three workflows also support manual "Run workflow" with a `force` checkbox to bypass the gate entirely.
+- Testing without spamming the team: set `SLACK_TEST_MODE_USER_NAME` (a Slack real name, e.g. "Cam Doherty") in Render to redirect **every** outbound message — channel digests and DM reminders alike — to just that person. Unset it (blank the value in the Render dashboard) to go back to normal broadcast behavior.
 - Identity: there are no Slack-specific accounts. A person's identity for Slack-submitted entries is resolved from their Slack profile's real name at submission time; for the *outbound* DM reminders, `team-members.json` names are matched against the Slack workspace directory (`users.list`) by normalized name — see "Adding a new team member" below.
 
 ## Credentials — where they live
@@ -31,8 +34,9 @@ All of these are **Render environment variables** (dashboard → the `api` servi
 | `SLACK_BOT_TOKEN` | Auth for all outbound Slack API calls | Manually pasted from the Slack app's OAuth & Permissions page — **not** auto-generated, `render.yaml` just declares the key exists (`sync: false`) |
 | `SLACK_SIGNING_SECRET` | Verifies incoming requests really came from Slack | Same as above — manually pasted from the Slack app's Basic Information page |
 | `SLACK_GENERAL_CHANNEL_ID` | Which channel gets the daily Neal Street digests (today's at 9am, tomorrow's at 4pm) | Plain value in `render.yaml`, currently `C0BJV5KDT4P` |
-| `SLACK_SCHEDULER_SECRET` | Gates the scheduler-trigger endpoint (separate from `ADMIN_SECRET`, to scope blast radius) | Auto-generated by Render (`generateValue: true`) |
-| `SLACK_SCHEDULER_SECRET` (again) | The GitHub Actions workflow needs the *same* value to call the endpoint | Copied manually from Render's dashboard into **GitHub repo → Settings → Secrets and variables → Actions** — Render and GitHub don't sync this automatically, so if it's ever regenerated on one side, it needs re-copying to the other |
+| `SLACK_SCHEDULER_SECRET` | Gates the scheduler-trigger endpoints (separate from `ADMIN_SECRET`, to scope blast radius) | Auto-generated by Render (`generateValue: true`) |
+| `SLACK_SCHEDULER_SECRET` (again) | The GitHub Actions workflows need the *same* value to call the endpoints | Copied manually from Render's dashboard into **GitHub repo → Settings → Secrets and variables → Actions** — Render and GitHub don't sync this automatically, so if it's ever regenerated on one side, it needs re-copying to the other |
+| `SLACK_TEST_MODE_USER_NAME` | Optional: redirects every outbound message to just this one person for testing | Manually set/unset in Render dashboard (`sync: false`, blank by default) |
 
 **Also relevant, not Slack-specific:** `ROSTER_URL`/`CLIENTS_URL` default to fetching `team-members.json`/`clients.json` from the live frontend (`in-office.vercel.app`) — no env var needed unless overriding. `CORS_ORIGIN_REGEX` (in `backend/app.py`, not an env var by default) matches preview deployment URLs by the **Vercel project name** — if that project is ever renamed again, this needs updating too (see the comment right above it in the code, and `backend/tests/test_api.py::test_vercel_preview_cors_regex_matches_current_project_name`, which will start failing if it drifts).
 

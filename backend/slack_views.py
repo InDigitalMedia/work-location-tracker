@@ -69,8 +69,19 @@ def _sub_label(week_start: str, offset: int, field_name: str) -> str:
     return f"↳ {field_name} ({short_day})"
 
 
-def build_quickfill_message(week_start: str, has_split_last_week: bool = False) -> dict:
-    """Block Kit message body (blocks + fallback text) for the quick-fill prompt."""
+def build_quickfill_message(
+    week_start: str, has_split_last_week: bool = False, header_text: str | None = None, mention: str | None = None
+) -> dict:
+    """Block Kit message body (blocks + fallback text) for the quick-fill prompt.
+    header_text lets callers reuse this for other weeks (e.g. the Friday next-week
+    reminder) with wording appropriate to that context; defaults to the standard
+    "fill in your week" prompt used by the same-week daily reminder. mention is a
+    ready-made Slack mention string (e.g. "<@U123>") for the recipient, prefixed
+    onto the header so it's clear who's being asked even if the DM is forwarded
+    or screenshotted."""
+    header_text = header_text or "Don't forget to fill in your week!"
+    if mention:
+        header_text = f"Hey {mention} — {header_text}"
     note = ""
     if has_split_last_week:
         note = "\n_Note: last week included a split (half) day, so \"Same as last week\" will skip that day -- use Fill in week for it._"
@@ -80,7 +91,7 @@ def build_quickfill_message(week_start: str, has_split_last_week: bool = False) 
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Don't forget to fill in your week!*{note}",
+                "text": f"*{header_text}*{note}",
             },
         },
         {
@@ -101,7 +112,7 @@ def build_quickfill_message(week_start: str, has_split_last_week: bool = False) 
             ],
         },
     ]
-    return {"text": "Don't forget to fill in your week!", "blocks": blocks}
+    return {"text": header_text, "blocks": blocks}
 
 
 def _build_day_blocks(week_start: str, day_state: dict) -> list:
@@ -369,3 +380,45 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
     })
 
     return {"text": "Here's who's at Neal Street this week", "blocks": blocks}
+
+
+def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
+    """Same visual style as build_neal_street_week_message (header, divider, day
+    section, "See Full Schedule" button) but for the single-day 4pm heads-up."""
+    directory = directory or {}
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
+    day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:",
+            },
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{day_header}*\n🏢 {_format_names(names, directory)}",
+            },
+        },
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "See Full Schedule"},
+                    "url": TRACKER_URL,
+                    "action_id": ACTION_VIEW_FULL_SCHEDULE,
+                    "value": TRACKER_URL,
+                }
+            ],
+        },
+    ]
+
+    return {"text": "Here's who's at Neal Street tomorrow", "blocks": blocks}
