@@ -16,7 +16,7 @@ When you redeploy your app, the database gets wiped because SQLite data is store
 
 ### 1️⃣ Push Updated Code to GitHub
 ```bash
-cd /path/to/work-location-tracker
+cd /path/to/in-office
 git add render.yaml
 git commit -m "Add PostgreSQL database for persistent storage"
 git push origin main
@@ -33,7 +33,7 @@ git push origin main
 4. **Create New Web Service:**
    - Click "New" → "Web Service"
    - Connect your GitHub repo
-   - Select `InDigitalMedia/work-location-tracker`
+   - Select `InDigitalMedia/in-office`
    - **Root Directory**: `backend`
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`

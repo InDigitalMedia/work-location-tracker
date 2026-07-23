@@ -393,6 +393,8 @@
     <div class="claude-note">
       <strong>Status update (2026-07-20):</strong> All three legs are confirmed done, via different mechanisms than originally planned below (kept for historical context). GitHub: repo is at <code>github.com/InDigitalMedia/work-location-tracker</code> (an org). Vercel: live production frontend is now <code>https://in-office.vercel.app</code>. Render: backend migrated to a new account under <code>media@indigital.marketing</code>, live at <code>https://api-a8uz.onrender.com</code>, and <code>/summary/all-users</code> confirms historical entries (including Shaz's) survived the migration — not a fresh empty database.
       <br><br>
+      <strong>Update (2026-07-23):</strong> GitHub repo renamed to <code>github.com/InDigitalMedia/in-office</code>, and the Vercel project renamed to match (<code>vercel.com/in-digital/in-office</code>) — the production URL <code>in-office.vercel.app</code> and Render backend are unaffected by either rename.
+      <br><br>
       The <em>old</em> pairing — <code>work-location-tracker.vercel.app</code> calling the now-suspended <code>work-location-tracker.onrender.com</code> — is dead and orphaned from Shaz's original manual setup. That's expected now that the app has moved to the URLs above; it initially looked like a live outage until this was clarified. Cleanup of the old Vercel project / Render service is still open (see Step 5).
     </div>
 
@@ -418,7 +420,7 @@
     <ul class="checklist">
       <li><input type="checkbox" id="s1-0" checked><label for="s1-0">Shaz: transferred the repo (destination ended up being the <code>InDigitalMedia</code> GitHub org rather than Cam's personal account)</label></li>
       <li><input type="checkbox" id="s1-1" checked><label for="s1-1">Cam: accepted the transfer</label></li>
-      <li><input type="checkbox" id="s1-2" checked><label for="s1-2">Cam: repo URL is now <code>github.com/InDigitalMedia/work-location-tracker</code>; local remote confirmed pointing there via <code>git remote -v</code></label></li>
+      <li><input type="checkbox" id="s1-2" checked><label for="s1-2">Cam: repo URL is now <code>github.com/InDigitalMedia/in-office</code> (renamed 2026-07-23, was <code>work-location-tracker</code>); local remote confirmed pointing there via <code>git remote -v</code></label></li>
     </ul>
   </section>
 

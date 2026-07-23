@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains all documentation for the Work Location Tracker project.
+This directory contains all documentation for the In Office project.
 
 ## Structure
 
@@ -14,11 +14,11 @@ This directory contains all documentation for the Work Location Tracker project.
 - **docs/deployment/** - Deployment guides
   - `DEPLOY.md` - General deployment instructions
   - `DEPLOY_INSTRUCTIONS.md` - Detailed deployment steps
-  - `DEPLOYMENT_COMPLETE.md` - Deployment completion notes
   - `HOSTING_GUIDE.md` - Hosting platform setup
 
 - **docs/history/** - Historical notes and fixes
   - `CHECK_SETTINGS.md` - Settings configuration notes
+  - `DEPLOYMENT_COMPLETE_INITIAL.md` - Original "you're live!" deployment notes (superseded — see `HANDOVER.md` for current URLs)
   - `FIX_LOGIN_REQUIRED.md` - Login fixes
   - `LOCATION_OPTIONS_UPDATE.md` - Location options changes
   - `QUICK_START_INITIAL_DEPLOYMENT.md` - Original Render/Vercel deployment walkthrough (superseded — see `HANDOVER.md` for current URLs)

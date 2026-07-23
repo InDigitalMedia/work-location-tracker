@@ -1,3 +1,5 @@
+> **Historical:** describes the *original* deployment (`work-location-tracker.onrender.com` / `.vercel.app`), now suspended/orphaned and superseded by `api-a8uz.onrender.com` / `in-office.vercel.app`. See `HANDOVER.md` for current status and `docs/RUNNING_GUIDE.md` for how the app runs today. Kept here for historical context only.
+
 # 🎉 Your Work Location Tracker is LIVE!
 
 ## ✅ Deployment Complete!
