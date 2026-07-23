@@ -369,3 +369,45 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
     })
 
     return {"text": "Here's who's at Neal Street this week", "blocks": blocks}
+
+
+def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
+    """Same visual style as build_neal_street_week_message (header, divider, day
+    section, "See Full Schedule" button) but for the single-day 4pm heads-up."""
+    directory = directory or {}
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
+    day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:",
+            },
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{day_header}*\n🏢 {_format_names(names, directory)}",
+            },
+        },
+        {"type": "divider"},
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "See Full Schedule"},
+                    "url": TRACKER_URL,
+                    "action_id": ACTION_VIEW_FULL_SCHEDULE,
+                    "value": TRACKER_URL,
+                }
+            ],
+        },
+    ]
+
+    return {"text": "Here's who's at Neal Street tomorrow", "blocks": blocks}

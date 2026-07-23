@@ -101,8 +101,22 @@ def run_tomorrow_digest(session: Session, force: bool = False) -> dict:
     tomorrow_str = tomorrow.strftime("%Y-%m-%d")
     week_start = monday_of(tomorrow)
 
-    neal_street_count = _post_neal_street_digest_for_day(session, week_start, tomorrow_str, "tomorrow")
+    neal_street_count = _post_neal_street_tomorrow_digest(session, week_start, tomorrow_str)
     return {"ok": True, "neal_street_count": neal_street_count}
+
+
+def _post_neal_street_tomorrow_digest(session: Session, week_start: str, tomorrow_str: str) -> int:
+    if not SLACK_GENERAL_CHANNEL_ID:
+        logger.warning("SLACK_GENERAL_CHANNEL_ID not configured -- skipping tomorrow digest")
+        return 0
+
+    week_entries = queries.get_week_entries(session, week_start)
+    names = [row.user_name for row in week_entries if row.date == tomorrow_str and row.location == "Neal Street"]
+
+    directory = slack_directory.build_directory()
+    message = slack_views.build_neal_street_tomorrow_message(tomorrow_str, names, directory)
+    slack_client.post_message(SLACK_GENERAL_CHANNEL_ID, message["text"], blocks=message["blocks"])
+    return len(set(names))
 
 
 def _send_unfilled_reminders(session: Session, week_start: str) -> tuple[int, list]:
