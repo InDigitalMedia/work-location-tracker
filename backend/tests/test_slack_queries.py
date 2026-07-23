@@ -38,6 +38,33 @@ def test_get_last_week_entries_for_user_full_days(test_session):
     assert 1 not in result  # Tuesday had no entry
 
 
+def test_build_prefill_includes_client_choice_for_client_office(test_session, monkeypatch):
+    """Regression test: _build_prefill previously only returned "text" for a
+    Client Office day, not "client_choice" -- since _build_day_blocks keys off
+    client_choice (not text) to decide the dropdown's initial selection and
+    whether to show the custom-name field, reopening /log-week for a week with
+    an existing Client Office entry showed the dropdown blank, silently losing
+    the client name on save unless the user noticed and re-picked it."""
+    import clients
+    import slack_routes
+    import slack_views
+    from schemas import EntryCreate
+
+    monkeypatch.setattr(clients, "get_clients", lambda: ["Sky", "FT"])
+
+    upsert_entries(test_session, "Alice Johnson", [
+        EntryCreate(date="2026-07-27", location="Client Office", client="Sky"),  # a listed client
+        EntryCreate(date="2026-07-28", location="Client Office", client="Acme Ventures"),  # a custom one
+    ])
+
+    prefill = slack_routes._build_prefill(test_session, "alice johnson", "2026-07-27")
+
+    assert prefill[0]["client_choice"] == "Sky"
+    assert prefill[0]["text"] == "Sky"
+    assert prefill[1]["client_choice"] == slack_views.CUSTOM_CLIENT_VALUE
+    assert prefill[1]["text"] == "Acme Ventures"
+
+
 def test_get_last_week_entries_for_user_skips_split_days(test_session):
     """A split (morning/afternoon) day should show up under morning/afternoon,
     not full -- callers (the Slack quick-fill) are expected to skip these."""
