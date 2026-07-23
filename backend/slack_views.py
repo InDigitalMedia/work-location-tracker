@@ -135,7 +135,6 @@ def _build_day_blocks(week_start: str, day_state: dict) -> list:
         location_block = {
             "type": "input",
             "block_id": f"day_{offset}",
-            "optional": True,
             "dispatch_action": True,
             "label": {"type": "plain_text", "text": _day_label(week_start, offset)},
             "element": {
