@@ -6,7 +6,12 @@ on:
     # endpoint itself checks the current London hour and no-ops on the firing
     # that doesn't match, so this never needs editing for daylight saving.
     - cron: '0 8,9 * * 1-5'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Bypass the weekday/9am-London gate and send for real right now'
+        type: boolean
+        default: false
 
 jobs:
   trigger:
@@ -15,5 +20,5 @@ jobs:
       - name: Call scheduler endpoint
         run: |
           curl -sS -f --retry 3 --retry-delay 5 --max-time 90 \
-            -X POST https://api-a8uz.onrender.com/internal/slack/daily-notifications \
+            -X POST "https://api-a8uz.onrender.com/internal/slack/daily-notifications?force=${{ github.event.inputs.force || 'false' }}" \
             -H "X-Scheduler-Secret: ${{ secrets.SLACK_SCHEDULER_SECRET }}"
