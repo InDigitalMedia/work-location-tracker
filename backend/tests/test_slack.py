@@ -382,28 +382,27 @@ def test_build_neal_street_tomorrow_message_ends_with_full_schedule_button():
     assert button["url"] == slack_views.TRACKER_URL
 
 
-def test_build_neal_street_today_message_has_friendly_header():
-    message = slack_views.build_neal_street_today_message([])
-    body_text = message["blocks"][0]["text"]["text"]
+def test_build_neal_street_today_message_has_bold_header_matching_week_summary_style():
+    message = slack_views.build_neal_street_today_message("2026-07-29", [])
+    header_text = message["blocks"][0]["text"]["text"]
 
-    assert "Good morning team" in body_text
-    assert "Here's who's in the office today:" in body_text
+    assert header_text == "*Here's who's at Neal Street today*"
 
 
-def test_build_neal_street_today_message_lists_names_below_the_header():
+def test_build_neal_street_today_message_shows_day_and_mentions():
     directory = {"alice johnson": {"id": "U001", "real_name": "Alice Johnson"}}
-    message = slack_views.build_neal_street_today_message(["Alice Johnson", "Ghost Person"], directory)
+    message = slack_views.build_neal_street_today_message(
+        "2026-07-29", ["Alice Johnson", "Ghost Person"], directory
+    )
+    blocks_text = json.dumps(message["blocks"])
 
-    body_text = message["blocks"][0]["text"]["text"]
-    header_line, _, names_line = body_text.partition("Here's who's in the office today:")
-
-    assert "Good morning team" in header_line
-    assert "<@U001>" in names_line
-    assert "@Ghost Person" in names_line
+    assert "Wed 29" in blocks_text
+    assert "<@U001>" in blocks_text
+    assert "@Ghost Person" in blocks_text
 
 
 def test_build_neal_street_today_message_ends_with_full_schedule_button():
-    message = slack_views.build_neal_street_today_message([])
+    message = slack_views.build_neal_street_today_message("2026-07-29", [])
     actions_block = message["blocks"][-1]
 
     assert actions_block["type"] == "actions"

@@ -113,7 +113,7 @@ def _post_neal_street_digest(session: Session, week_start: str, today_str: str) 
     week_entries = queries.get_week_entries(session, week_start)
     names = [row.user_name for row in week_entries if row.date == today_str and row.location == "Neal Street"]
 
-    message = slack_views.build_neal_street_today_message(names, directory)
+    message = slack_views.build_neal_street_today_message(today_str, names, directory)
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
     return len(set(names))
 
