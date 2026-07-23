@@ -12,11 +12,12 @@
    slack_routes.py's dispatch handler) -- _build_day_blocks is the single source
    of truth for that rendering rule, used both on initial open and on every
    live update, so the two can't drift apart.
-3. format_week_summary -- shown privately to whoever just finished submitting,
-   so they can see where the rest of the team is that week without switching
-   to the web app.
+3. build_neal_street_week_message -- shown privately to whoever just finished
+   submitting, Officely-style: each day clearly separated, Neal Street only,
+   with a link back to the full tracker.
 """
 import json
+import os
 from datetime import datetime, timedelta
 
 from pydantic import ValidationError
@@ -66,7 +67,7 @@ def build_quickfill_message(week_start: str, has_split_last_week: bool = False) 
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Fill in your week of {_day_label(week_start, 0)}*{note}",
+                "text": f"*Don't forget to fill in your week!*{note}",
             },
         },
         {
@@ -87,7 +88,7 @@ def build_quickfill_message(week_start: str, has_split_last_week: bool = False) 
             ],
         },
     ]
-    return {"text": f"Fill in your week of {_day_label(week_start, 0)}", "blocks": blocks}
+    return {"text": "Don't forget to fill in your week!", "blocks": blocks}
 
 
 def _build_day_blocks(week_start: str, day_state: dict) -> list:
@@ -277,26 +278,79 @@ def parse_week_submission(view: dict) -> tuple[list[EntryCreate], dict]:
     return entries, errors
 
 
-def format_week_summary(week_entries: list, week_start: str) -> str:
-    """Text summary of the whole team's week, grouped by day then location --
-    mirrors the dashboard style documented in docs/CHANGELOG.md
-    ("[Neal Street] - John, Alice, Bob")."""
-    by_date: dict[str, dict[str, list[str]]] = {}
-    for row in week_entries:
-        by_date.setdefault(row.date, {}).setdefault(row.location, []).append(row.user_name)
+TRACKER_URL = os.getenv("TRACKER_URL", "https://in-office.vercel.app")
 
-    sections = [f"*Who's where this week ({_day_label(week_start, 0)}):*"]
+_ORDINAL_SUFFIXES = {1: "st", 2: "nd", 3: "rd"}
+_MAX_NAMES_SHOWN = 5
+
+
+def _ordinal_day(day: int) -> str:
+    if 11 <= day % 100 <= 13:
+        suffix = "th"
+    else:
+        suffix = _ORDINAL_SUFFIXES.get(day % 10, "th")
+    return f"{day}{suffix}"
+
+
+def _mention(name: str, directory: dict) -> str:
+    """A real Slack mention (<@ID>, renders as a clickable @name pill) if this
+    person's normalized name matches the Slack directory, else their plain
+    display name as inert text -- still informative, just not clickable."""
+    match = directory.get(name.strip().lower())
+    return f"<@{match['id']}>" if match else f"@{name}"
+
+
+def _format_names(names: list[str], directory: dict) -> str:
+    unique_sorted = sorted(set(names))
+    if not unique_sorted:
+        return "_No one going_"
+    shown = unique_sorted[:_MAX_NAMES_SHOWN]
+    rest = len(unique_sorted) - len(shown)
+    text = "  ".join(_mention(n, directory) for n in shown)
+    if rest > 0:
+        text += f"  _{rest} other{'s' if rest != 1 else ''}_"
+    return text
+
+
+def build_neal_street_week_message(week_entries: list, week_start: str, directory: dict | None = None) -> dict:
+    """Officely-style summary: each day clearly separated, Neal Street only (the
+    "who's in the office" question people actually ask), with a link to the full
+    tracker for anyone who wants the other locations too."""
+    directory = directory or {}
+    by_date: dict[str, list[str]] = {}
+    for row in week_entries:
+        if row.location == "Neal Street":
+            by_date.setdefault(row.date, []).append(row.user_name)
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"🏢 *Here's who's at Neal Street this week*"},
+        },
+    ]
     for offset in range(5):
         date_str = _day_date(week_start, offset)
-        locations = by_date.get(date_str, {})
-        day_lines = [f"*{WEEKDAY_NAMES[offset]}*"]
-        if not locations:
-            day_lines.append("  _No entries yet_")
-        else:
-            for loc in VALID_LOCATIONS:
-                names = locations.get(loc)
-                if names:
-                    day_lines.append(f"  {loc} - {', '.join(sorted(set(names)))}")
-        sections.append("\n".join(day_lines))
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        day_header = f"{WEEKDAY_NAMES[offset][:3]} {_ordinal_day(date_obj.day)}"
+        blocks.append({"type": "divider"})
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{day_header}*\n🏢 {_format_names(by_date.get(date_str, []), directory)}",
+            },
+        })
 
-    return "\n\n".join(sections)
+    blocks.append({"type": "divider"})
+    blocks.append({
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "See Full Schedule"},
+                "url": TRACKER_URL,
+            }
+        ],
+    })
+
+    return {"text": "Here's who's at Neal Street this week", "blocks": blocks}

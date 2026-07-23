@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timedelta
 from urllib.parse import parse_qsl
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
@@ -17,6 +17,7 @@ import entries as entries_module
 import queries
 import roster
 import slack_client
+import slack_directory
 import slack_views
 from db import get_session
 from schemas import EntryCreate
@@ -110,7 +111,11 @@ async def slack_slash_command(request: Request, session: Session = Depends(get_s
     # no need for the intermediate quick-fill button step here (that's only
     # needed by the daily reminder DM, which can't obtain a trigger_id on its own).
     _open_week_modal(session, trigger_id, user_id, _current_week_start())
-    return JSONResponse({})
+    # A genuinely empty body, not JSONResponse({}) -- Slack's slash-command
+    # contract treats a JSON object lacking "text"/"blocks" as a malformed
+    # message to render (which showed up as a literal "{}" bubble), whereas an
+    # empty 200 is the documented way to acknowledge with nothing posted.
+    return Response(status_code=200)
 
 
 @slack_router.post("/slack/interactivity")
@@ -125,15 +130,15 @@ async def slack_interactivity(
     payload_type = payload.get("type")
 
     if payload_type == "block_actions":
-        return _handle_block_action(session, payload)
+        return _handle_block_action(session, payload, background_tasks)
     if payload_type == "view_submission":
         return _handle_view_submission(session, payload, background_tasks)
 
     # Anything else (e.g. a shortcut we haven't wired up) -- ack defensively.
-    return JSONResponse({})
+    return Response(status_code=200)
 
 
-def _handle_block_action(session: Session, payload: dict) -> JSONResponse:
+def _handle_block_action(session: Session, payload: dict, background_tasks: BackgroundTasks) -> Response:
     action = payload["actions"][0]
     action_id = action["action_id"]
 
@@ -154,7 +159,7 @@ def _handle_block_action(session: Session, payload: dict) -> JSONResponse:
     if action_id == slack_views.ACTION_FILL_WEEK:
         prefill = _build_prefill(session, user_key, week_start)
         slack_client.open_view(trigger_id, slack_views.build_week_modal(week_start, resolved_name, prefill))
-        return JSONResponse({})
+        return Response(status_code=200)
 
     if action_id == slack_views.ACTION_SAME_AS_LAST_WEEK:
         last_week = queries.get_last_week_entries_for_user(session, user_key, week_start)
@@ -177,24 +182,28 @@ def _handle_block_action(session: Session, payload: dict) -> JSONResponse:
         if not entries_list:
             if response_url:
                 slack_client.respond_via_response_url(response_url, "No matching full-day entries found last week -- try Fill in week instead.")
-            return JSONResponse({})
+            return Response(status_code=200)
 
         try:
             entries_module.upsert_entries(session, resolved_name, entries_list)
             note = " (a split day last week was skipped -- set it via Fill in week)" if skipped_split else ""
-            summary = slack_views.format_week_summary(queries.get_week_entries(session, week_start), week_start)
             if response_url:
-                slack_client.respond_via_response_url(response_url, f"✅ Copied last week{note}\n\n{summary}")
+                slack_client.respond_via_response_url(response_url, f"✅ Week successfully entered!{note}")
+                # Building the Neal Street summary needs the Slack directory
+                # (users.list), which can be slow on a cold cache -- defer it so
+                # this handler's own ack isn't at risk of the same kind of
+                # 3-second timeout the slash command hit before.
+                background_tasks.add_task(_send_week_summary, session, response_url, week_start)
         except ValueError as e:
             if response_url:
-                slack_client.respond_via_response_url(response_url, f"❌ Couldn't save: {e}")
-        return JSONResponse({})
+                slack_client.respond_via_response_url(response_url, f"❌ Something went wrong, week not saved: {e}")
+        return Response(status_code=200)
 
     logger.warning(f"Unhandled block_actions action_id: {action_id}")
-    return JSONResponse({})
+    return Response(status_code=200)
 
 
-def _handle_location_change(payload: dict) -> JSONResponse:
+def _handle_location_change(payload: dict) -> Response:
     """A day's location select changed while the modal is still open -- rebuild
     the view so that day's client/description field appears or disappears, then
     push it back via views.update. No DB access needed here."""
@@ -203,13 +212,13 @@ def _handle_location_change(payload: dict) -> JSONResponse:
     day_state = slack_views.extract_day_state(view["state"]["values"])
     updated_view = slack_views.rebuild_modal_view(metadata["week_start"], metadata["user_name"], day_state)
     slack_client.update_view(view["id"], view.get("hash"), updated_view)
-    return JSONResponse({})
+    return Response(status_code=200)
 
 
-def _handle_view_submission(session: Session, payload: dict, background_tasks: BackgroundTasks) -> JSONResponse:
+def _handle_view_submission(session: Session, payload: dict, background_tasks: BackgroundTasks) -> Response:
     view = payload["view"]
     if view.get("callback_id") != slack_views.CALLBACK_ID_WEEK_MODAL:
-        return JSONResponse({})
+        return Response(status_code=200)
 
     entries_list, errors = slack_views.parse_week_submission(view)
     if errors:
@@ -225,19 +234,39 @@ def _handle_view_submission(session: Session, payload: dict, background_tasks: B
         return JSONResponse({"response_action": "errors", "errors": {"day_0": str(e)}})
 
     user_id = payload["user"]["id"]
-    background_tasks.add_task(_send_confirmation_dm, session, user_id, entries_list, week_start)
-    return JSONResponse({})
+    background_tasks.add_task(_send_confirmation_dm, session, user_id, week_start)
+    return Response(status_code=200)
 
 
-def _send_confirmation_dm(session: Session, user_id: str, entries_list: list, week_start: str) -> None:
+def _build_week_summary_message(session: Session, week_start: str) -> dict:
+    directory = slack_directory.build_directory()
+    week_entries = queries.get_week_entries(session, week_start)
+    return slack_views.build_neal_street_week_message(week_entries, week_start, directory)
+
+
+def _send_confirmation_dm(session: Session, user_id: str, week_start: str) -> None:
+    dm_channel = slack_client.open_dm(user_id)
+    if not dm_channel:
+        logger.error(f"Could not open DM with {user_id} to confirm their saved week")
+        return
+    slack_client.post_message(dm_channel, "✅ Week successfully entered!")
     try:
-        saved_summary = ", ".join(f"{e.date} → {e.location}" for e in entries_list) or "no days set"
-        week_summary = slack_views.format_week_summary(queries.get_week_entries(session, week_start), week_start)
-        dm_channel = slack_client.open_dm(user_id)
-        if dm_channel:
-            slack_client.post_message(dm_channel, f"✅ Saved: {saved_summary}\n\n{week_summary}")
+        message = _build_week_summary_message(session, week_start)
+        slack_client.post_message(dm_channel, message["text"], blocks=message["blocks"])
     except Exception as e:
-        logger.error(f"Failed to send confirmation DM: {e}")
+        # The save itself already succeeded (upsert_entries ran before this
+        # background task started) -- only the follow-up summary failed, so
+        # let them know that specifically rather than silently dropping it.
+        logger.error(f"Failed to send week summary DM: {e}")
+        slack_client.post_message(dm_channel, "⚠️ (Couldn't load the who's-where-this-week summary right now.)")
+
+
+def _send_week_summary(session: Session, response_url: str, week_start: str) -> None:
+    try:
+        message = _build_week_summary_message(session, week_start)
+        slack_client.respond_via_response_url(response_url, message["text"], blocks=message["blocks"], replace_original=False)
+    except Exception as e:
+        logger.error(f"Failed to send week summary: {e}")
 
 
 @slack_router.post("/internal/slack/daily-notifications", dependencies=[Depends(require_scheduler)])
