@@ -8,6 +8,7 @@ This directory contains all documentation for the In Office project.
   - `HOW_TO_USE.md` - How to use the application
   - `RUNNING_GUIDE.md` - How to run the application
   - `SHARE_WITH_TEAM.md` - Instructions for sharing with your team
+  - `SLACK_INTEGRATION.md` - Slack integration: setup, credentials, ownership handover, adding team members, troubleshooting
   - `IDEAS.md` - Future enhancement ideas
   - `CHANGELOG.md` - Project changes and updates
 
@@ -30,4 +31,5 @@ This directory contains all documentation for the In Office project.
 - [How to Use](../README.md#usage) - Back to main README
 - [Running Guide](RUNNING_GUIDE.md) - Run/deploy the app today
 - [Deployment Instructions](deployment/DEPLOY.md) - Deploy the app
+- [Slack Integration](SLACK_INTEGRATION.md) - Setup, credentials, and handover for the Slack integration
 

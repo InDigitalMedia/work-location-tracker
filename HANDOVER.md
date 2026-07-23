@@ -79,6 +79,14 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 
 > The weekly report email feature (SendGrid, `backend/report.py`, `/admin/send-weekly-report`) has been removed entirely — the site no longer sends any email, so there's nothing to transfer or re-key here.
 
+## Step 6 — Slack integration ownership (added 2026-07-23, after this doc was originally written)
+
+A Slack integration (`/log-week` slash command, daily reminders, Neal Street digest) was added after the original GitHub/Vercel/Render handover above. It's a **separate fourth leg of ownership** this doc didn't originally cover — full detail in `docs/SLACK_INTEGRATION.md`, summarized here:
+
+- [ ] The Slack app itself (api.slack.com/apps) lives under whichever Slack account created it — **this repo has no record of which account that is**. Confirm who has admin access (the app's **Collaborators** page, or ask a workspace admin) and add the new owner.
+- [ ] Confirm the new owner has Render dashboard access to `SLACK_BOT_TOKEN`/`SLACK_SIGNING_SECRET`/`SLACK_SCHEDULER_SECRET` (should already be covered by Step 3, just flagging these specific secrets are easy to overlook).
+- [ ] Confirm the new owner has access to this GitHub repo's **Settings → Secrets and variables → Actions**, where a copy of `SLACK_SCHEDULER_SECRET` is stored (Render and GitHub don't sync this value automatically).
+
 ## Not relevant — safe to ignore
 
 `ecosystem.config.js` and `config/com.worktracker.*.plist` reference a local PM2/launchd setup — originally hardcoded to Shaz's own Mac, since updated (2026-07-20) to Cam's machine path / made host-agnostic. Confirmed dead either way (nothing running, logs stop Oct 31 2025) — production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.

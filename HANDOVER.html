@@ -511,6 +511,20 @@
     </div>
   </section>
 
+  <section class="step" data-step="6">
+    <div class="step-badge">6</div>
+    <h2>Slack integration ownership</h2>
+    <p class="ref">Added 2026-07-23, after this doc was originally written.</p>
+    <div class="claude-note">
+      A Slack integration (<code>/log-week</code> slash command, daily reminders, Neal Street digest) was added after the original GitHub/Vercel/Render handover above. It's a <strong>separate fourth leg of ownership</strong> this doc didn't originally cover — full detail in <code>docs/SLACK_INTEGRATION.md</code>, summarized here.
+    </div>
+    <ul class="checklist">
+      <li><input type="checkbox" id="s6-0"><label for="s6-0">The Slack app itself (api.slack.com/apps) lives under whichever Slack account created it — <strong>this repo has no record of which account that is</strong>. Confirm who has admin access (the app's <strong>Collaborators</strong> page, or ask a workspace admin) and add the new owner</label></li>
+      <li><input type="checkbox" id="s6-1"><label for="s6-1">Confirm the new owner has Render dashboard access to <code>SLACK_BOT_TOKEN</code>/<code>SLACK_SIGNING_SECRET</code>/<code>SLACK_SCHEDULER_SECRET</code> (should already be covered by Step 3, just flagging these specific secrets are easy to overlook)</label></li>
+      <li><input type="checkbox" id="s6-2"><label for="s6-2">Confirm the new owner has access to this GitHub repo's <strong>Settings → Secrets and variables → Actions</strong>, where a copy of <code>SLACK_SCHEDULER_SECRET</code> is stored (Render and GitHub don't sync this value automatically)</label></li>
+    </ul>
+  </section>
+
   <footer class="doc-foot">
     <strong>Not relevant — safe to ignore:</strong> <code>ecosystem.config.js</code> and <code>config/com.worktracker.*.plist</code> reference a local PM2/launchd setup — originally hardcoded to Shaz's own Mac, since updated (2026-07-20) to Cam's machine path / made host-agnostic. Confirmed dead either way — nothing running, logs stop Oct 31 2025. Production genuinely runs on Render + Vercel, not anyone's laptop. Delete these files or leave them; they don't affect the transfer.
     <br><br>
