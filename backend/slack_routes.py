@@ -81,22 +81,37 @@ def _build_prefill(session: Session, user_key: str, week_start: str) -> dict:
 
 
 @slack_router.post("/slack/commands")
-async def slack_slash_command(request: Request):
+async def slack_slash_command(request: Request, background_tasks: BackgroundTasks):
     raw = await _verify_slack_request(request)
     fields = dict(parse_qsl(raw.decode("utf-8")))
     user_id = fields.get("user_id", "")
+    response_url = fields.get("response_url", "")
 
-    resolved_name, matched = _resolve_identity(user_id)
-    week_start = daily_notifications.monday_of(datetime.now(daily_notifications.LONDON_TZ).date())
+    # Slack requires the initial response within 3 seconds. Resolving identity
+    # (a Slack API call) and fetching the roster (an HTTP call to Vercel) are
+    # both real network round trips that can blow that budget, especially on a
+    # cold Render instance -- so ack instantly here and deliver the actual
+    # quick-fill buttons via response_url from a background task instead.
+    background_tasks.add_task(_build_and_send_quickfill_prompt, user_id, response_url)
+    return JSONResponse({"response_type": "ephemeral", "text": "One sec..."})
 
-    # A note if this person's Slack profile doesn't match anyone in team-members.json --
-    # they can still use the buttons (their Slack name is used as-is), but it's worth
-    # surfacing so it can get reconciled.
-    mismatch_note = "" if matched else "\n_(Couldn't match your Slack name to the team roster -- using your Slack name directly.)_"
 
-    message = slack_views.build_quickfill_message(week_start)
-    message["text"] += mismatch_note
-    return JSONResponse({"response_type": "ephemeral", **message})
+def _build_and_send_quickfill_prompt(user_id: str, response_url: str) -> None:
+    try:
+        resolved_name, matched = _resolve_identity(user_id)
+        week_start = daily_notifications.monday_of(datetime.now(daily_notifications.LONDON_TZ).date())
+
+        # A note if this person's Slack profile doesn't match anyone in team-members.json --
+        # they can still use the buttons (their Slack name is used as-is), but it's worth
+        # surfacing so it can get reconciled.
+        mismatch_note = "" if matched else "\n_(Couldn't match your Slack name to the team roster -- using your Slack name directly.)_"
+
+        message = slack_views.build_quickfill_message(week_start)
+        message["text"] += mismatch_note
+        slack_client.respond_via_response_url(response_url, message["text"], blocks=message["blocks"])
+    except Exception as e:
+        logger.error(f"Failed to build/send quick-fill prompt: {e}")
+        slack_client.respond_via_response_url(response_url, "Something went wrong opening the form -- try again.")
 
 
 @slack_router.post("/slack/interactivity")
