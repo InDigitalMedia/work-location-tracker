@@ -22,8 +22,9 @@ def test_session():
 
 
 @pytest.fixture(scope="function")
-def client(test_session):
+def client(test_session, monkeypatch):
     """Create a test client with dependency override."""
+    monkeypatch.setattr("app.ADMIN_SECRET", "test-secret")
 
     def get_test_session():
         yield test_session
@@ -151,8 +152,8 @@ def test_delete_entry_success(client):
     assert len(entries) == 1
     entry_id = entries[0]["id"]
 
-    # Delete the entry
-    response = client.delete(f"/entries/{entry_id}")
+    # Delete the entry (admin-gated -- see require_admin in app.py)
+    response = client.delete(f"/entries/{entry_id}", headers={"X-Admin-Secret": "test-secret"})
     assert response.status_code == 200
     data = response.json()
     assert data["ok"] is True
@@ -160,7 +161,7 @@ def test_delete_entry_success(client):
 
 def test_delete_entry_not_found(client):
     """Test deleting non-existent entry."""
-    response = client.delete("/entries/99999")
+    response = client.delete("/entries/99999", headers={"X-Admin-Secret": "test-secret"})
     assert response.status_code == 404
 
 

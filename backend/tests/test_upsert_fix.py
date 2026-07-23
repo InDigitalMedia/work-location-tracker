@@ -183,13 +183,17 @@ def test_uniqueness_enforced(client):
 
 
 def test_no_destructive_delete_path(client):
-    """Test that bulk_upsert no longer calls delete-by-range before inserts."""
-    # Read the source code to verify no delete statements
+    """Test that bulk_upsert no longer calls delete-by-range before inserts.
+
+    The upsert logic lives in entries.upsert_entries (app.bulk_upsert_entries is now
+    a thin wrapper around it, also used by the Slack integration), so that's what
+    this inspects.
+    """
     import inspect
-    from app import bulk_upsert_entries
-    
-    source = inspect.getsource(bulk_upsert_entries)
-    
+    from entries import upsert_entries
+
+    source = inspect.getsource(upsert_entries)
+
     # Verify no destructive delete patterns (should not contain delete-by-range logic)
     assert "delete_ids_stmt" not in source
     assert ".in_(entries_to_delete)" not in source
