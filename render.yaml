@@ -22,3 +22,11 @@ services:
         value: https://in-office.vercel.app
       - key: ADMIN_SECRET
         generateValue: true
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+      - key: SLACK_GENERAL_CHANNEL_ID
+        value: "C0BJV5KDT4P"
+      - key: SLACK_SCHEDULER_SECRET
+        generateValue: true
