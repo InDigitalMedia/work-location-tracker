@@ -478,3 +478,54 @@ def test_gate_matches_target_hour_across_dst(monkeypatch):
         result = daily_notifications.run_daily_notifications(_FakeSession())
         assert "skipped" not in result
         assert result["ok"] is True
+
+
+# --- daily_notifications tomorrow-digest gate ---------------------------------
+
+def _run_tomorrow_digest_with_fixed_now(monkeypatch, fixed_dt):
+    fixed = _FixedDatetime(
+        fixed_dt.year, fixed_dt.month, fixed_dt.day,
+        fixed_dt.hour, fixed_dt.minute, tzinfo=fixed_dt.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    return daily_notifications.run_tomorrow_digest(session=None)
+
+
+def test_tomorrow_digest_gate_skips_weekend(monkeypatch):
+    saturday_4pm = datetime(2026, 7, 25, 16, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
+    result = _run_tomorrow_digest_with_fixed_now(monkeypatch, saturday_4pm)
+    assert result == {"ok": True, "skipped": "weekend"}
+
+
+def test_tomorrow_digest_gate_skips_off_hour(monkeypatch):
+    tuesday_2pm = datetime(2026, 7, 28, 14, 0, tzinfo=ZoneInfo("Europe/London"))
+    result = _run_tomorrow_digest_with_fixed_now(monkeypatch, tuesday_2pm)
+    assert result["skipped"] == "not target hour"
+    assert result["hour"] == 14
+
+
+def test_tomorrow_digest_gate_skips_when_tomorrow_is_weekend(monkeypatch):
+    friday_4pm = datetime(2026, 7, 31, 16, 0, tzinfo=ZoneInfo("Europe/London"))  # a Friday
+    result = _run_tomorrow_digest_with_fixed_now(monkeypatch, friday_4pm)
+    assert result == {"ok": True, "skipped": "tomorrow is a weekend"}
+
+
+def test_tomorrow_digest_gate_passes_on_a_weekday_afternoon(monkeypatch):
+    tuesday_4pm = datetime(2026, 7, 28, 16, 0, tzinfo=ZoneInfo("Europe/London"))  # a Tuesday
+    result = _run_tomorrow_digest_with_fixed_now(monkeypatch, tuesday_4pm)
+    assert "skipped" not in result
+    assert result["ok"] is True
+
+
+def test_tomorrow_digest_force_bypasses_gate(monkeypatch):
+    saturday_9am = datetime(2026, 7, 25, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
+    fixed = _FixedDatetime(
+        saturday_9am.year, saturday_9am.month, saturday_9am.day,
+        saturday_9am.hour, saturday_9am.minute, tzinfo=saturday_9am.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    result = daily_notifications.run_tomorrow_digest(session=None, force=True)
+    assert "skipped" not in result
+    assert result["ok"] is True
