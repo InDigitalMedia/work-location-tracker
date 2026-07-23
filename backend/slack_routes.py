@@ -137,10 +137,10 @@ def _handle_block_action(session: Session, payload: dict) -> JSONResponse:
     action = payload["actions"][0]
     action_id = action["action_id"]
 
-    # A day's location select changing inside an already-open modal -- rebuild
-    # its blocks (to show/hide that day's client field) rather than treating
-    # this like a quick-fill button.
-    if action_id == slack_views.LOCATION_ACTION_ID:
+    # A day's location select (or, for Client Office, its client dropdown)
+    # changing inside an already-open modal -- rebuild its blocks (to show/hide
+    # the relevant client field) rather than treating this like a quick-fill button.
+    if action_id in slack_views.DISPATCH_ACTION_IDS:
         return _handle_location_change(payload)
 
     week_start = action["value"]
