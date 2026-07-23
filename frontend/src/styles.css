@@ -62,6 +62,7 @@
   /* Header extras */
   --logo-filter: none;
   --logo-filter-hover: none;
+  --logo-border: none;
   --heading-shadow: none;
 
   /* Secondary / toggle / preset buttons */
@@ -255,6 +256,9 @@
 
   --logo-filter: brightness(1.1);
   --logo-filter-hover: brightness(1.2);
+  /* The logo has a solid black background -- without a border it visually
+     disappears into the dark theme's near-black page background. */
+  --logo-border: 1px solid var(--border-color);
   --heading-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
   --btn-bg: #000000;
@@ -432,6 +436,9 @@ h1, h2, h3, h4, h5, h6 {
   width: 90px;
   height: 66px;
   flex-shrink: 0;
+  box-sizing: border-box;
+  border: var(--logo-border);
+  border-radius: 4px;
   filter: var(--logo-filter);
   transition: all 0.3s ease;
   object-fit: contain;

@@ -1184,7 +1184,7 @@ function App() {
     <div className="container">
       <div className="header">
         <div className="header-content">
-          <img src="/logo.jpg" alt="Logo" className="logo" />
+          <img src="/logo.png" alt="Logo" className="logo" />
           <div className="header-text">
             <h1>In Office</h1>
             <p>Track where your team is working this week</p>
