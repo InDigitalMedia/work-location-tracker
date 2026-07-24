@@ -365,16 +365,18 @@ def _format_location_groups(day_rows: list, directory: dict) -> str:
 
     sections = []
     if neal_street_names:
-        sections.append(f"🏢 *Neal Street*\n{_format_names(neal_street_names, directory)}")
+        count = len(set(neal_street_names))
+        sections.append(f"🏢 *Neal Street ({count})*\n{_format_names(neal_street_names, directory)}")
 
     if client_rows:
+        count = len({row.user_name for row in client_rows})
         by_client: dict[str, list[str]] = {}
         for row in client_rows:
             by_client.setdefault(row.client or "No Client", []).append(row.user_name)
         client_lines = "\n".join(
             f"{client}: {_format_names(names, directory)}" for client, names in sorted(by_client.items())
         )
-        sections.append(f"💼 *Client Office*\n{client_lines}")
+        sections.append(f"💼 *Client Office ({count})*\n{client_lines}")
 
     if not sections:
         return "_No one in the office_"
@@ -391,7 +393,7 @@ def build_neal_street_week_message(
     Friday next-week digest) -- defaults to the standard "this week" wording
     used by the post-submission summary."""
     directory = directory or {}
-    header_text = header_text or "Here's who's at Neal Street this week"
+    header_text = header_text or "Here's who's in the office this week"
     by_date: dict[str, list] = {}
     for row in week_entries:
         if row.location in ("Neal Street", "Client Office"):
@@ -478,7 +480,7 @@ def build_neal_street_today_message(date_str: str, day_rows: list, directory: di
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
     day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
-    greeting = ":coffee: Good morning everyone! Here's who's at Neal Street today :point_down:"
+    greeting = ":coffee: Good morning everyone! Here's who's in the office today :point_down:"
     return _build_single_day_neal_street_message(greeting, day_header, day_rows, directory)
 
 
@@ -488,5 +490,5 @@ def build_neal_street_tomorrow_message(date_str: str, day_rows: list, directory:
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
     day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
-    greeting = ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:"
+    greeting = ":wave: Good afternoon everyone! Here's who will be in the office tomorrow :point_down:"
     return _build_single_day_neal_street_message(greeting, day_header, day_rows, directory)

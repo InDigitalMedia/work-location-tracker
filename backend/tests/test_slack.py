@@ -296,12 +296,27 @@ def test_format_location_groups_shows_neal_street_and_client_office_on_separate_
     text = slack_views._format_location_groups(day_rows, {})
     lines = text.split("\n")
 
-    assert "🏢 *Neal Street*" in lines
+    assert "🏢 *Neal Street (1)*" in lines
     assert "@Alice" in lines
-    assert "💼 *Client Office*" in lines
+    assert "💼 *Client Office (2)*" in lines
     assert "Sky: @Bob" in lines
     assert "FT: @Carol" in lines
     assert "Dave" not in text
+
+
+def test_format_location_groups_headcount_reflects_unique_people():
+    day_rows = [
+        _Row("2026-07-27", "Neal Street", "Alice"),
+        _Row("2026-07-27", "Neal Street", "Bob"),
+        _Row("2026-07-27", "Client Office", "Carol", client="Sky"),
+        _Row("2026-07-27", "Client Office", "Dave", client="FT"),
+        _Row("2026-07-27", "Client Office", "Eve", client="FT"),
+    ]
+
+    text = slack_views._format_location_groups(day_rows, {})
+
+    assert "🏢 *Neal Street (2)*" in text
+    assert "💼 *Client Office (3)*" in text
 
 
 def test_format_location_groups_omits_empty_sections():
@@ -396,7 +411,7 @@ def test_build_neal_street_tomorrow_message_has_friendly_header():
     header_text = message["blocks"][0]["text"]["text"]
 
     assert "Good afternoon" in header_text
-    assert "Neal Street tomorrow" in header_text
+    assert "in the office tomorrow" in header_text
 
 
 def test_build_neal_street_tomorrow_message_shows_day_and_mentions():
@@ -439,7 +454,7 @@ def test_build_neal_street_today_message_has_friendly_header():
     message = slack_views.build_neal_street_today_message("2026-07-29", [])
     header_text = message["blocks"][0]["text"]["text"]
 
-    assert header_text == ":coffee: Good morning everyone! Here's who's at Neal Street today :point_down:"
+    assert header_text == ":coffee: Good morning everyone! Here's who's in the office today :point_down:"
 
 
 def test_build_neal_street_today_message_shows_day_and_mentions():
@@ -879,7 +894,7 @@ def test_post_neal_street_next_week_digest_uses_next_week_header(monkeypatch):
     assert count == 1
     assert captured["channel"] == "C0GENERAL"
     assert captured["blocks"][0]["text"]["text"] == (
-        "*:wave: Good afternoon everyone! Here's who will be at Neal Street next week :point_down:*"
+        "*:wave: Good afternoon everyone! Here's who will be in the office next week :point_down:*"
     )
 
 
