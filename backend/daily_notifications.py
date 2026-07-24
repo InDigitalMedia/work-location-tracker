@@ -134,26 +134,32 @@ def _post_neal_street_digest(session: Session, week_start: str, today_str: str) 
 
 
 def run_tomorrow_digest(session: Session, force: bool = False) -> dict:
-    """Posts to the Neal Street channel at 4pm London time announcing who's in
-    tomorrow, so people can plan around it same-day. force=True bypasses every
-    gate below for manual test runs (see trigger_tomorrow_digest in
-    slack_routes.py) -- the scheduled GitHub Actions cron never sets it."""
+    """Posts to the Neal Street channel at 4pm London time. On Mon-Thu this
+    announces who's in tomorrow; on Friday, "tomorrow" would be Saturday (not
+    useful), so it instead posts the whole of next week's schedule -- one
+    action, branching on which day it's run, rather than a separate Friday-only
+    job. force=True bypasses the weekday/hour gate below for manual test runs
+    (see trigger_tomorrow_digest in slack_routes.py) -- the scheduled GitHub
+    Actions cron never sets it."""
     now = datetime.now(LONDON_TZ)
-    tomorrow = now.date() + timedelta(days=1)
 
     if not force:
         if now.weekday() >= 5:
             return {"ok": True, "skipped": "weekend"}
         if now.hour != AFTERNOON_TARGET_HOUR:
             return {"ok": True, "skipped": "not target hour", "hour": now.hour}
-        if tomorrow.weekday() >= 5:
-            return {"ok": True, "skipped": "tomorrow is a weekend"}
 
+    if now.weekday() == 4:
+        next_week_start = monday_of(now.date() + timedelta(days=7))
+        neal_street_count = _post_neal_street_next_week_digest(session, next_week_start)
+        return {"ok": True, "neal_street_count": neal_street_count, "period": "next_week"}
+
+    tomorrow = now.date() + timedelta(days=1)
     tomorrow_str = tomorrow.strftime("%Y-%m-%d")
     week_start = monday_of(tomorrow)
 
     neal_street_count = _post_neal_street_tomorrow_digest(session, week_start, tomorrow_str)
-    return {"ok": True, "neal_street_count": neal_street_count}
+    return {"ok": True, "neal_street_count": neal_street_count, "period": "tomorrow"}
 
 
 def _post_neal_street_tomorrow_digest(session: Session, week_start: str, tomorrow_str: str) -> int:
@@ -168,6 +174,20 @@ def _post_neal_street_tomorrow_digest(session: Session, week_start: str, tomorro
     message = slack_views.build_neal_street_tomorrow_message(tomorrow_str, names, directory)
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
     return len(set(names))
+
+
+def _post_neal_street_next_week_digest(session: Session, next_week_start: str) -> int:
+    directory = slack_directory.build_directory()
+    channel = _resolve_digest_channel(directory)
+    if not channel:
+        return 0
+
+    week_entries = queries.get_week_entries(session, next_week_start)
+    message = slack_views.build_neal_street_week_message(
+        week_entries, next_week_start, directory, header_text="Here's who's at Neal Street next week"
+    )
+    slack_client.post_message(channel, message["text"], blocks=message["blocks"])
+    return len({row.user_name for row in week_entries if row.location == "Neal Street"})
 
 
 def run_next_week_reminder(session: Session, force: bool = False) -> dict:

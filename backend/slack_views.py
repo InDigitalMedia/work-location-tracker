@@ -354,11 +354,17 @@ def _format_names(names: list[str], directory: dict) -> str:
     return "  ".join(_mention(n, directory) for n in unique_sorted)
 
 
-def build_neal_street_week_message(week_entries: list, week_start: str, directory: dict | None = None) -> dict:
+def build_neal_street_week_message(
+    week_entries: list, week_start: str, directory: dict | None = None, header_text: str | None = None
+) -> dict:
     """Officely-style summary: each day clearly separated, Neal Street only (the
     "who's in the office" question people actually ask), with a link to the full
-    tracker for anyone who wants the other locations too."""
+    tracker for anyone who wants the other locations too. header_text lets
+    callers reuse this for a different week (e.g. the Friday next-week digest)
+    -- defaults to the standard "this week" wording used by the post-submission
+    summary."""
     directory = directory or {}
+    header_text = header_text or "Here's who's at Neal Street this week"
     by_date: dict[str, list[str]] = {}
     for row in week_entries:
         if row.location == "Neal Street":
@@ -367,7 +373,7 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
     blocks = [
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": "*Here's who's at Neal Street this week*"},
+            "text": {"type": "mrkdwn", "text": f"*{header_text}*"},
         },
     ]
     for offset in range(5):
@@ -401,7 +407,7 @@ def build_neal_street_week_message(week_entries: list, week_start: str, director
         ],
     })
 
-    return {"text": "Here's who's at Neal Street this week", "blocks": blocks}
+    return {"text": header_text, "blocks": blocks}
 
 
 def _build_single_day_neal_street_message(greeting: str, day_label: str, names: list[str], directory: dict | None = None) -> dict:
