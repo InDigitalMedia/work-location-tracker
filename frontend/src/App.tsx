@@ -1886,6 +1886,16 @@ function App() {
                   const otherCount = new Set(dayAllEntries.filter(e => e.location === 'Other').map(e => e.user_name)).size
                   const notEnteredCount = allUsers.length - enteredUsers.size
 
+                  const attendanceItems = [
+                    { emoji: '🏢', count: nealStreetCount, label: 'Neal Street' },
+                    { emoji: '💼', count: clientOfficeCount, label: 'Client Office' },
+                    { emoji: '🏠', count: wfhCount, label: 'WFH' },
+                    { emoji: '✈️', count: workingFromAbroadCount, label: 'Working From Abroad' },
+                    { emoji: '🌴', count: holidayCount, label: 'Holiday' },
+                    { emoji: '📝', count: otherCount, label: 'Other' },
+                    { emoji: '❓', count: notEnteredCount, label: 'not entered' },
+                  ].filter(item => item.count > 0)
+
                   return (
                   <div
                     id={`day-${date}`}
@@ -1904,19 +1914,12 @@ function App() {
 
                     {/* Attendance summary bar */}
                     <div className="attendance-bar">
-                      <span>🏢 {nealStreetCount} Neal Street</span>
-                      <span className="attendance-dot">·</span>
-                      <span>💼 {clientOfficeCount} Client Office</span>
-                      <span className="attendance-dot">·</span>
-                      <span>🏠 {wfhCount} WFH</span>
-                      <span className="attendance-dot">·</span>
-                      <span>✈️ {workingFromAbroadCount} Working From Abroad</span>
-                      <span className="attendance-dot">·</span>
-                      <span>🌴 {holidayCount} Holiday</span>
-                      <span className="attendance-dot">·</span>
-                      <span>📝 {otherCount} Other</span>
-                      <span className="attendance-dot">·</span>
-                      <span>❓ {notEnteredCount} not entered</span>
+                      {attendanceItems.map((item, index) => (
+                        <React.Fragment key={item.label}>
+                          {index > 0 && <span className="attendance-dot">·</span>}
+                          <span>{item.emoji} {item.count} {item.label}</span>
+                        </React.Fragment>
+                      ))}
                     </div>
 
                     {(() => {
