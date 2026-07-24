@@ -28,7 +28,12 @@ from schemas import EntryCreate
 VALID_LOCATIONS = ["Neal Street", "WFH", "Client Office", "Holiday", "Working From Abroad", "Other"]
 CLIENT_TEXT_LOCATIONS = ("Client Office", "Other")
 
-WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+# The week modal only ever covers Mon-Fri (offsets 0-4), but the single-day
+# today/tomorrow digests index by date_obj.weekday() directly -- Saturday(5)/
+# Sunday(6) are reachable there when force=True bypasses the weekend gate (e.g.
+# manually forcing "tomorrow" on a Friday), so this list must cover all 7 days
+# to avoid an IndexError -> 500.
 
 LOCATION_ACTION_ID = "location"
 CLIENT_SELECT_ACTION_ID = "client_select"

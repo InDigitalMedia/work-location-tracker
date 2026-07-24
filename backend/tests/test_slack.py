@@ -382,6 +382,18 @@ def test_build_neal_street_tomorrow_message_ends_with_full_schedule_button():
     assert button["url"] == slack_views.TRACKER_URL
 
 
+def test_build_neal_street_tomorrow_message_handles_a_weekend_date_without_crashing():
+    """Regression test: force=True bypasses the "tomorrow is a weekend" gate
+    (see run_tomorrow_digest), so this must accept a Saturday/Sunday date_str
+    without raising -- WEEKDAY_NAMES used to only cover Mon-Fri, causing an
+    IndexError -> 500 in production when force-triggered on a Friday."""
+    saturday_message = slack_views.build_neal_street_tomorrow_message("2026-07-25", [])
+    assert "Sat 25" in saturday_message["blocks"][2]["text"]["text"]
+
+    sunday_message = slack_views.build_neal_street_tomorrow_message("2026-07-26", [])
+    assert "Sun 26" in sunday_message["blocks"][2]["text"]["text"]
+
+
 def test_build_neal_street_today_message_has_bold_header_matching_week_summary_style():
     message = slack_views.build_neal_street_today_message("2026-07-29", [])
     header_text = message["blocks"][0]["text"]["text"]
