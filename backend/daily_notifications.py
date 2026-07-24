@@ -1,10 +1,10 @@
 """The Slack scheduled jobs: Neal Street digests to a channel + quick-fill DM reminders.
 
-Triggered by POST /internal/slack/daily-notifications, /internal/slack/tomorrow-digest,
-and /internal/slack/next-week-reminder, each called twice by a GitHub Actions cron
-(once per UTC-equivalent of the target London hour) so this can gate on "is it
-actually the target hour in London" without ever needing a cron expression edited
-for BST/GMT.
+Triggered by POST /internal/slack/daily-digest, /internal/slack/unfilled-reminders,
+/internal/slack/tomorrow-digest, and /internal/slack/next-week-reminder, each called
+twice by a GitHub Actions cron (once per UTC-equivalent of the target London hour) so
+this can gate on "is it actually the target hour in London" without ever needing a
+cron expression edited for BST/GMT.
 """
 import logging
 import os
@@ -76,12 +76,11 @@ def _restrict_to_test_mode(matched: dict) -> dict:
     return {name: slack_id for name, slack_id in matched.items() if name.strip().lower() == key}
 
 
-def run_daily_notifications(session: Session, force: bool = False) -> dict:
-    """force=True skips the weekday/hour gate entirely -- used for manual test
-    runs (see slack_routes.py's trigger_daily_notifications), so someone can
-    actually see real messages sent on demand rather than the endpoint silently
-    no-opping outside the real 9am-London/weekday window. The scheduled GitHub
-    Actions cron never sets this -- only a human explicitly asking to force it."""
+def run_today_digest(session: Session, force: bool = False) -> dict:
+    """Posts to the Neal Street channel at 9am London time announcing who's in
+    today. force=True bypasses the weekday/hour gate entirely -- used for
+    manual test runs (see trigger_today_digest in slack_routes.py) -- the
+    scheduled GitHub Actions cron never sets it."""
     now = datetime.now(LONDON_TZ)
 
     if not force:
@@ -94,11 +93,27 @@ def run_daily_notifications(session: Session, force: bool = False) -> dict:
     week_start = monday_of(now.date())
 
     neal_street_count = _post_neal_street_digest(session, week_start, today_str)
+    return {"ok": True, "neal_street_count": neal_street_count}
+
+
+def run_unfilled_reminders(session: Session, force: bool = False) -> dict:
+    """DMs a quick-fill prompt at 9am London to anyone who hasn't yet entered
+    this week's locations. force=True bypasses the weekday/hour gate entirely
+    -- used for manual test runs (see trigger_unfilled_reminders in
+    slack_routes.py) -- the scheduled GitHub Actions cron never sets it."""
+    now = datetime.now(LONDON_TZ)
+
+    if not force:
+        if now.weekday() >= 5:
+            return {"ok": True, "skipped": "weekend"}
+        if now.hour != TARGET_HOUR:
+            return {"ok": True, "skipped": "not target hour", "hour": now.hour}
+
+    week_start = monday_of(now.date())
     reminders_sent, unmatched = _send_quickfill_reminders(session, week_start)
 
     return {
         "ok": True,
-        "neal_street_count": neal_street_count,
         "reminders_sent": reminders_sent,
         "unmatched_roster_names": unmatched,
     }

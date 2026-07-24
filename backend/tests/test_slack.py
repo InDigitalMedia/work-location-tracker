@@ -602,30 +602,92 @@ class _FixedDatetime(datetime):
         return cls._fixed
 
 
-def _run_with_fixed_now(monkeypatch, fixed_dt):
+def _run_today_digest_with_fixed_now(monkeypatch, fixed_dt):
     fixed = _FixedDatetime(
         fixed_dt.year, fixed_dt.month, fixed_dt.day,
         fixed_dt.hour, fixed_dt.minute, tzinfo=fixed_dt.tzinfo,
     )
     _FixedDatetime._fixed = fixed
     monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
-    return daily_notifications.run_daily_notifications(session=None)
+    return daily_notifications.run_today_digest(session=None)
 
 
-def test_gate_skips_weekend(monkeypatch):
+def test_today_digest_gate_skips_weekend(monkeypatch):
     saturday_9am = datetime(2026, 7, 25, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
-    result = _run_with_fixed_now(monkeypatch, saturday_9am)
+    result = _run_today_digest_with_fixed_now(monkeypatch, saturday_9am)
     assert result == {"ok": True, "skipped": "weekend"}
 
 
-def test_gate_skips_off_hour(monkeypatch):
+def test_today_digest_gate_skips_off_hour(monkeypatch):
     tuesday_2pm = datetime(2026, 7, 28, 14, 0, tzinfo=ZoneInfo("Europe/London"))
-    result = _run_with_fixed_now(monkeypatch, tuesday_2pm)
+    result = _run_today_digest_with_fixed_now(monkeypatch, tuesday_2pm)
     assert result["skipped"] == "not target hour"
     assert result["hour"] == 14
 
 
-def test_gate_matches_target_hour_across_dst(monkeypatch):
+def test_today_digest_gate_matches_target_hour_across_dst(monkeypatch):
+    """Both a BST morning and a GMT-era morning at the configured target hour
+    should pass the gate (not be skipped) -- this is the whole point of firing
+    the GitHub Actions cron at both UTC 08:00 and 09:00."""
+    for tz_date in [
+        datetime(2026, 7, 28, 9, 0, tzinfo=ZoneInfo("Europe/London")),   # BST (summer)
+        datetime(2026, 1, 27, 9, 0, tzinfo=ZoneInfo("Europe/London")),  # GMT (winter)
+    ]:
+        fixed = _FixedDatetime(
+            tz_date.year, tz_date.month, tz_date.day, tz_date.hour, tz_date.minute, tzinfo=tz_date.tzinfo
+        )
+        _FixedDatetime._fixed = fixed
+        monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+
+        # SLACK_GENERAL_CHANNEL_ID unset in test env -> digest step no-ops
+        # safely. We're only asserting the gate itself didn't short-circuit.
+        class _FakeSession:
+            pass
+
+        result = daily_notifications.run_today_digest(_FakeSession())
+        assert "skipped" not in result
+        assert result["ok"] is True
+
+
+def test_today_digest_force_bypasses_gate(monkeypatch):
+    saturday_9am = datetime(2026, 7, 25, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
+    fixed = _FixedDatetime(
+        saturday_9am.year, saturday_9am.month, saturday_9am.day,
+        saturday_9am.hour, saturday_9am.minute, tzinfo=saturday_9am.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    result = daily_notifications.run_today_digest(session=None, force=True)
+    assert "skipped" not in result
+    assert result["ok"] is True
+
+
+# --- daily_notifications unfilled-reminders gate ------------------------------
+
+def _run_unfilled_reminders_with_fixed_now(monkeypatch, fixed_dt):
+    fixed = _FixedDatetime(
+        fixed_dt.year, fixed_dt.month, fixed_dt.day,
+        fixed_dt.hour, fixed_dt.minute, tzinfo=fixed_dt.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    return daily_notifications.run_unfilled_reminders(session=None)
+
+
+def test_unfilled_reminders_gate_skips_weekend(monkeypatch):
+    saturday_9am = datetime(2026, 7, 25, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
+    result = _run_unfilled_reminders_with_fixed_now(monkeypatch, saturday_9am)
+    assert result == {"ok": True, "skipped": "weekend"}
+
+
+def test_unfilled_reminders_gate_skips_off_hour(monkeypatch):
+    tuesday_2pm = datetime(2026, 7, 28, 14, 0, tzinfo=ZoneInfo("Europe/London"))
+    result = _run_unfilled_reminders_with_fixed_now(monkeypatch, tuesday_2pm)
+    assert result["skipped"] == "not target hour"
+    assert result["hour"] == 14
+
+
+def test_unfilled_reminders_gate_matches_target_hour_across_dst(monkeypatch):
     """Both a BST morning and a GMT-era morning at the configured target hour
     should pass the gate (not be skipped) -- this is the whole point of firing
     the GitHub Actions cron at both UTC 08:00 and 09:00."""
@@ -640,18 +702,31 @@ def test_gate_matches_target_hour_across_dst(monkeypatch):
         _FixedDatetime._fixed = fixed
         monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
 
-        # SLACK_GENERAL_CHANNEL_ID unset in test env -> digest step no-ops safely,
-        # roster empty -> reminder step no-ops safely. We're only asserting the
-        # gate itself didn't short-circuit with a "skipped" result.
+        # roster empty -> reminder step no-ops safely. We're only asserting
+        # the gate itself didn't short-circuit with a "skipped" result.
         class _FakeSession:
             pass
 
-        monkeypatch.setattr(daily_notifications.queries, "get_week_entries", lambda session, week_start: [])
         monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
 
-        result = daily_notifications.run_daily_notifications(_FakeSession())
+        result = daily_notifications.run_unfilled_reminders(_FakeSession())
         assert "skipped" not in result
         assert result["ok"] is True
+
+
+def test_unfilled_reminders_force_bypasses_gate(monkeypatch):
+    monkeypatch.setattr(daily_notifications.roster, "get_roster", lambda: [])
+    monkeypatch.setattr(daily_notifications.queries, "get_submitted_users", lambda session, week_start: [])
+    saturday_9am = datetime(2026, 7, 25, 9, 0, tzinfo=ZoneInfo("Europe/London"))  # a Saturday
+    fixed = _FixedDatetime(
+        saturday_9am.year, saturday_9am.month, saturday_9am.day,
+        saturday_9am.hour, saturday_9am.minute, tzinfo=saturday_9am.tzinfo,
+    )
+    _FixedDatetime._fixed = fixed
+    monkeypatch.setattr(daily_notifications, "datetime", _FixedDatetime)
+    result = daily_notifications.run_unfilled_reminders(session=None, force=True)
+    assert "skipped" not in result
+    assert result["ok"] is True
 
 
 # --- daily_notifications tomorrow-digest gate ---------------------------------
