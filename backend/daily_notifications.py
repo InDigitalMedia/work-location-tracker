@@ -184,7 +184,10 @@ def _post_neal_street_next_week_digest(session: Session, next_week_start: str) -
 
     week_entries = queries.get_week_entries(session, next_week_start)
     message = slack_views.build_neal_street_week_message(
-        week_entries, next_week_start, directory, header_text="Here's who's at Neal Street next week"
+        week_entries,
+        next_week_start,
+        directory,
+        header_text=":wave: Good afternoon everyone! Here's who will be at Neal Street next week :point_down:",
     )
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
     return len({row.user_name for row in week_entries if row.location in ("Neal Street", "Client Office")})

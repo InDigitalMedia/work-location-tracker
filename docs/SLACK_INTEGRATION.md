@@ -4,7 +4,7 @@ Lets people fill in their week and see who's at Neal Street without leaving Slac
 
 ## What it does
 
-- **`/log-week` slash command** — opens a modal to fill in your week directly (Mon–Fri, one location per day, no morning/afternoon split — that's web-app-only). Re-running it pre-fills whatever you've already entered that week.
+- **`/enter-week` slash command** — opens a modal to fill in your week directly (Mon–Fri, one location per day, no morning/afternoon split — that's web-app-only). Re-running it pre-fills whatever you've already entered that week.
 - **Quick-fill buttons** ("🔁 Same as last week" / "✏️ Fill in week") — shown in the daily reminder DM (a bot can't open a modal without a fresh interaction, so the DM needs a button first; the slash command skips straight to the modal since it already has one). Both open the same modal, titled "Same as last week" pre-filled from last week's entries for the former, so the user can review and edit before explicitly submitting rather than a week being saved unseen. A split (half) day last week can't be pre-filled and is flagged with a note in the modal.
 - **Daily reminder DM** — every weekday morning, anyone who hasn't filled in their week yet gets DMed the quick-fill buttons, addressed to them by name (`Hey @Name — ...`). Runs as its own scheduled action, independent of the digest below.
 - **Daily Neal Street digest** — every weekday morning, a message goes to a configured channel, in the same style as the week summary below: a bold "Here's who's at Neal Street today" header, a day section, and real @mentions. Runs as its own scheduled action, independent of the reminder above.
@@ -17,7 +17,7 @@ Lets people fill in their week and see who's at Neal Street without leaving Slac
 
 - Backend: `backend/slack_routes.py` (the 6 HTTP endpoints), `backend/slack_views.py` (Block Kit message/modal building + parsing), `backend/slack_client.py` (thin Slack Web API wrapper + request signature verification), `backend/slack_directory.py` (matches `team-members.json` names against the Slack workspace directory), `backend/daily_notifications.py` (the scheduled jobs' logic).
 - The 6 endpoints, all under `app.include_router(slack_router)` in `backend/app.py`:
-  - `POST /slack/commands` — the `/log-week` slash command
+  - `POST /slack/commands` — the `/enter-week` slash command
   - `POST /slack/interactivity` — button clicks, modal field changes, and modal submission all come through here
   - `POST /internal/slack/daily-digest` — the 9am "who's in the office today" channel post (gated by its own secret, see below); accepts an optional `?force=true` query param that bypasses the weekday/hour gate, for manual test runs
   - `POST /internal/slack/unfilled-reminders` — the 9am DM reminders to anyone who hasn't filled in their week; same gating and `?force=true` behavior. Split from the digest above into its own endpoint/workflow so each can be tested or fail independently.
@@ -53,7 +53,7 @@ Unlike GitHub/Vercel/Render (tracked in `HANDOVER.md`), **the Slack app itself l
 ## Adding a new team member
 
 1. Add their name to `frontend/public/team-members.json` (keep the array alphabetically sorted, case-insensitive — see `CLAUDE.md`). Match it to their **Slack profile's Full Name** (Slack → their profile → this is what daily reminder matching compares against) — if it doesn't match, they won't get reminder DMs (they'd show up in `unmatched_roster_names` in the daily job's log, see Troubleshooting).
-2. Nothing else is needed — `/log-week` works for anyone in the workspace immediately (it resolves identity directly from their Slack profile, not from the roster), and they'll start getting daily reminders once their name matches.
+2. Nothing else is needed — `/enter-week` works for anyone in the workspace immediately (it resolves identity directly from their Slack profile, not from the roster), and they'll start getting daily reminders once their name matches.
 
 ## Setting up from scratch (new workspace, or recreating the app)
 
@@ -61,7 +61,7 @@ Unlike GitHub/Vercel/Render (tracked in `HANDOVER.md`), **the Slack app itself l
 2. **OAuth & Permissions → Bot Token Scopes**: add `chat:write`, `users:read`, `im:write`.
 3. **Install to Workspace** (same page) → copy the **Bot User OAuth Token** (`xoxb-...`) → `SLACK_BOT_TOKEN`.
 4. **Basic Information → App Credentials → Signing Secret** → copy it → `SLACK_SIGNING_SECRET`.
-5. **Slash Commands → Create New Command**: `/log-week` (or any name, just workspace-unique), Request URL `https://api-a8uz.onrender.com/slack/commands`.
+5. **Slash Commands → Create New Command**: `/enter-week` (or any name, just workspace-unique), Request URL `https://api-a8uz.onrender.com/slack/commands`.
 6. **Interactivity & Shortcuts** → toggle on, Request URL `https://api-a8uz.onrender.com/slack/interactivity`.
 7. Invite the bot to whichever channel should get the daily digest, grab that channel's ID → `SLACK_GENERAL_CHANNEL_ID`.
 8. Set `SLACK_BOT_TOKEN`/`SLACK_SIGNING_SECRET`/`SLACK_GENERAL_CHANNEL_ID` in the Render dashboard (the `sync: false` entries in `render.yaml` are placeholders — Render won't fill them in for you).
@@ -70,7 +70,7 @@ Unlike GitHub/Vercel/Render (tracked in `HANDOVER.md`), **the Slack app itself l
 
 ## Troubleshooting
 
-- **"/log-week is not a valid command"** — the app hasn't been reinstalled since the slash command was added. Reinstall (OAuth & Permissions → Reinstall to Workspace).
+- **"/enter-week is not a valid command"** — the app hasn't been reinstalled since the slash command was added. Reinstall (OAuth & Permissions → Reinstall to Workspace).
 - **"App did not respond"** — either a cold Render instance (free tier sleeps after inactivity; try again a few seconds later), or a genuine bug in a handler that's taking >3s to ack. Check Render logs for what actually happened.
 - **A message literally says `{}`** — this was a real bug (fixed): Slack's slash-command/block-actions contract needs a truly empty HTTP response to ack silently; returning `{}` as a JSON body could get rendered as a literal `{}`. If it recurs, check for a route returning `JSONResponse({})` where it should return `Response(status_code=200)`.
 - **401 on every Slack request** — `SLACK_SIGNING_SECRET` is missing, wrong, or has a stray whitespace/newline from copy-paste. `backend/slack_client.py`'s `verify_signature` logs the configured secret's length and whether it has surrounding whitespace (never the secret itself) on a mismatch — check Render's logs for that line.

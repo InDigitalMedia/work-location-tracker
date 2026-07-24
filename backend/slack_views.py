@@ -3,7 +3,7 @@
 1. build_quickfill_message -- "Same as last week" / "Fill in week" buttons.
    Posted as the body of the daily unfilled-week reminder DM, which can't open a
    modal directly (no fresh trigger_id in a DM) so it needs a button first.
-   /log-week itself skips straight to the modal (see slack_routes.py) since a
+   /enter-week itself skips straight to the modal (see slack_routes.py) since a
    slash command already has a fresh trigger_id.
 2. build_week_modal / parse_week_submission -- the day-by-day entry form.
    Full-day only, per the confirmed scope -- no morning/afternoon split support.
@@ -478,7 +478,8 @@ def build_neal_street_today_message(date_str: str, day_rows: list, directory: di
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
     day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
-    return _build_single_day_neal_street_message("*Here's who's at Neal Street today*", day_header, day_rows, directory)
+    greeting = ":coffee: Good morning everyone! Here's who's at Neal Street today :point_down:"
+    return _build_single_day_neal_street_message(greeting, day_header, day_rows, directory)
 
 
 def build_neal_street_tomorrow_message(date_str: str, day_rows: list, directory: dict | None = None) -> dict:

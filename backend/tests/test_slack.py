@@ -435,11 +435,11 @@ def test_build_neal_street_tomorrow_message_handles_a_weekend_date_without_crash
     assert "Sun 26" in sunday_message["blocks"][2]["text"]["text"]
 
 
-def test_build_neal_street_today_message_has_bold_header_matching_week_summary_style():
+def test_build_neal_street_today_message_has_friendly_header():
     message = slack_views.build_neal_street_today_message("2026-07-29", [])
     header_text = message["blocks"][0]["text"]["text"]
 
-    assert header_text == "*Here's who's at Neal Street today*"
+    assert header_text == ":coffee: Good morning everyone! Here's who's at Neal Street today :point_down:"
 
 
 def test_build_neal_street_today_message_shows_day_and_mentions():
@@ -878,7 +878,9 @@ def test_post_neal_street_next_week_digest_uses_next_week_header(monkeypatch):
 
     assert count == 1
     assert captured["channel"] == "C0GENERAL"
-    assert captured["blocks"][0]["text"]["text"] == "*Here's who's at Neal Street next week*"
+    assert captured["blocks"][0]["text"]["text"] == (
+        "*:wave: Good afternoon everyone! Here's who will be at Neal Street next week :point_down:*"
+    )
 
 
 # --- daily_notifications next-week-reminder gate ------------------------------

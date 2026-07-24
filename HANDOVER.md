@@ -81,7 +81,7 @@ Reference: `render.yaml`, `docs/deployment/HOSTING_GUIDE.md`, `docs/deployment/D
 
 ## Step 6 — Slack integration ownership (added 2026-07-23, after this doc was originally written)
 
-A Slack integration (`/log-week` slash command, daily reminders, Neal Street digest) was added after the original GitHub/Vercel/Render handover above. It's a **separate fourth leg of ownership** this doc didn't originally cover — full detail in `docs/SLACK_INTEGRATION.md`, summarized here:
+A Slack integration (`/enter-week` slash command, daily reminders, Neal Street digest) was added after the original GitHub/Vercel/Render handover above. It's a **separate fourth leg of ownership** this doc didn't originally cover — full detail in `docs/SLACK_INTEGRATION.md`, summarized here:
 
 - [ ] The Slack app itself (api.slack.com/apps) lives under whichever Slack account created it — **this repo has no record of which account that is**. Confirm who has admin access (the app's **Collaborators** page, or ask a workspace admin) and add the new owner.
 - [ ] Confirm the new owner has Render dashboard access to `SLACK_BOT_TOKEN`/`SLACK_SIGNING_SECRET`/`SLACK_SCHEDULER_SECRET` (should already be covered by Step 3, just flagging these specific secrets are easy to overlook).

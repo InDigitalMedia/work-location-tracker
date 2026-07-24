@@ -42,7 +42,7 @@ def test_build_prefill_includes_client_choice_for_client_office(test_session, mo
     """Regression test: _build_prefill previously only returned "text" for a
     Client Office day, not "client_choice" -- since _build_day_blocks keys off
     client_choice (not text) to decide the dropdown's initial selection and
-    whether to show the custom-name field, reopening /log-week for a week with
+    whether to show the custom-name field, reopening /enter-week for a week with
     an existing Client Office entry showed the dropdown blank, silently losing
     the client name on save unless the user noticed and re-picked it."""
     import clients
