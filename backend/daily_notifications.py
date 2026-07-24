@@ -126,11 +126,11 @@ def _post_neal_street_digest(session: Session, week_start: str, today_str: str) 
         return 0
 
     week_entries = queries.get_week_entries(session, week_start)
-    names = [row.user_name for row in week_entries if row.date == today_str and row.location == "Neal Street"]
+    day_rows = [row for row in week_entries if row.date == today_str and row.location in ("Neal Street", "Client Office")]
 
-    message = slack_views.build_neal_street_today_message(today_str, names, directory)
+    message = slack_views.build_neal_street_today_message(today_str, day_rows, directory)
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
-    return len(set(names))
+    return len({row.user_name for row in day_rows})
 
 
 def run_tomorrow_digest(session: Session, force: bool = False) -> dict:
@@ -169,11 +169,11 @@ def _post_neal_street_tomorrow_digest(session: Session, week_start: str, tomorro
         return 0
 
     week_entries = queries.get_week_entries(session, week_start)
-    names = [row.user_name for row in week_entries if row.date == tomorrow_str and row.location == "Neal Street"]
+    day_rows = [row for row in week_entries if row.date == tomorrow_str and row.location in ("Neal Street", "Client Office")]
 
-    message = slack_views.build_neal_street_tomorrow_message(tomorrow_str, names, directory)
+    message = slack_views.build_neal_street_tomorrow_message(tomorrow_str, day_rows, directory)
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
-    return len(set(names))
+    return len({row.user_name for row in day_rows})
 
 
 def _post_neal_street_next_week_digest(session: Session, next_week_start: str) -> int:
@@ -187,7 +187,7 @@ def _post_neal_street_next_week_digest(session: Session, next_week_start: str) -
         week_entries, next_week_start, directory, header_text="Here's who's at Neal Street next week"
     )
     slack_client.post_message(channel, message["text"], blocks=message["blocks"])
-    return len({row.user_name for row in week_entries if row.location == "Neal Street"})
+    return len({row.user_name for row in week_entries if row.location in ("Neal Street", "Client Office")})
 
 
 def run_next_week_reminder(session: Session, force: bool = False) -> dict:
