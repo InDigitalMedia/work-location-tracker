@@ -1,4 +1,4 @@
-name: Slack Daily Notifications
+name: Slack Unfilled Week Reminders
 
 on:
   schedule:
@@ -20,5 +20,5 @@ jobs:
       - name: Call scheduler endpoint
         run: |
           curl -sS -f --retry 3 --retry-delay 5 --max-time 90 \
-            -X POST "https://api-a8uz.onrender.com/internal/slack/daily-notifications?force=${{ github.event.inputs.force || 'false' }}" \
+            -X POST "https://api-a8uz.onrender.com/internal/slack/unfilled-reminders?force=${{ github.event.inputs.force || 'false' }}" \
             -H "X-Scheduler-Secret: ${{ secrets.SLACK_SCHEDULER_SECRET }}"
