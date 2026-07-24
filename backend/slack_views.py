@@ -13,8 +13,8 @@
    of truth for that rendering rule, used both on initial open and on every
    live update, so the two can't drift apart.
 3. build_neal_street_week_message -- shown privately to whoever just finished
-   submitting, Officely-style: each day clearly separated, Neal Street only,
-   with a link back to the full tracker.
+   submitting, Officely-style: each day clearly separated, Neal Street and
+   Client Office (grouped by client), with a link back to the full tracker.
 """
 import json
 import os
@@ -354,21 +354,48 @@ def _format_names(names: list[str], directory: dict) -> str:
     return "  ".join(_mention(n, directory) for n in unique_sorted)
 
 
+def _format_location_groups(day_rows: list, directory: dict) -> str:
+    """Neal Street and Client Office, on separate lines, mirroring the tracker
+    website's Who's Where grouping -- Client Office is further broken out by
+    client name on its own rows below. Other locations (WFH, Holiday, etc.)
+    aren't shown here since these summaries are specifically about who's in
+    an office."""
+    neal_street_names = [row.user_name for row in day_rows if row.location == "Neal Street"]
+    client_rows = [row for row in day_rows if row.location == "Client Office"]
+
+    sections = []
+    if neal_street_names:
+        sections.append(f"🏢 *Neal Street*\n{_format_names(neal_street_names, directory)}")
+
+    if client_rows:
+        by_client: dict[str, list[str]] = {}
+        for row in client_rows:
+            by_client.setdefault(row.client or "No Client", []).append(row.user_name)
+        client_lines = "\n".join(
+            f"{client}: {_format_names(names, directory)}" for client, names in sorted(by_client.items())
+        )
+        sections.append(f"💼 *Client Office*\n{client_lines}")
+
+    if not sections:
+        return "_No one in the office_"
+    return "\n\n".join(sections)
+
+
 def build_neal_street_week_message(
     week_entries: list, week_start: str, directory: dict | None = None, header_text: str | None = None
 ) -> dict:
-    """Officely-style summary: each day clearly separated, Neal Street only (the
-    "who's in the office" question people actually ask), with a link to the full
-    tracker for anyone who wants the other locations too. header_text lets
-    callers reuse this for a different week (e.g. the Friday next-week digest)
-    -- defaults to the standard "this week" wording used by the post-submission
-    summary."""
+    """Officely-style summary: each day clearly separated, Neal Street and
+    Client Office (the "who's in an office" question people actually ask),
+    with a link to the full tracker for anyone who wants the other locations
+    too. header_text lets callers reuse this for a different week (e.g. the
+    Friday next-week digest) -- defaults to the standard "this week" wording
+    used by the post-submission summary."""
     directory = directory or {}
     header_text = header_text or "Here's who's at Neal Street this week"
-    by_date: dict[str, list[str]] = {}
+    by_date: dict[str, list] = {}
     for row in week_entries:
-        if row.location == "Neal Street":
-            by_date.setdefault(row.date, []).append(row.user_name)
+        if row.location in ("Neal Street", "Client Office"):
+            by_date.setdefault(row.date, []).append(row)
 
     blocks = [
         {
@@ -385,7 +412,7 @@ def build_neal_street_week_message(
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*{day_header}*\n🏢 {_format_names(by_date.get(date_str, []), directory)}",
+                "text": f"*{day_header}*\n{_format_location_groups(by_date.get(date_str, []), directory)}",
             },
         })
 
@@ -410,11 +437,11 @@ def build_neal_street_week_message(
     return {"text": header_text, "blocks": blocks}
 
 
-def _build_single_day_neal_street_message(greeting: str, day_label: str, names: list[str], directory: dict | None = None) -> dict:
-    """Shared shape for a single-day Neal Street heads-up (today's 9am digest,
-    tomorrow's 4pm digest): greeting, divider, a day section with names on the
-    line below the 🏢 marker (always real @mentions via the Slack directory
-    when available), divider, "See Full Schedule" button."""
+def _build_single_day_neal_street_message(greeting: str, day_label: str, day_rows: list, directory: dict | None = None) -> dict:
+    """Shared shape for a single-day heads-up (today's 9am digest, tomorrow's
+    4pm digest): greeting, divider, a day section with Neal Street/Client
+    Office broken out on separate lines (always real @mentions via the Slack
+    directory when available), divider, "See Full Schedule" button."""
     directory = directory or {}
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn", "text": greeting}},
@@ -423,7 +450,7 @@ def _build_single_day_neal_street_message(greeting: str, day_label: str, names: 
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*{day_label}*\n🏢 {_format_names(names, directory)}",
+                "text": f"*{day_label}*\n{_format_location_groups(day_rows, directory)}",
             },
         },
         {"type": "divider"},
@@ -444,21 +471,21 @@ def _build_single_day_neal_street_message(greeting: str, day_label: str, names: 
     return {"text": greeting, "blocks": blocks}
 
 
-def build_neal_street_today_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
+def build_neal_street_today_message(date_str: str, day_rows: list, directory: dict | None = None) -> dict:
     """Same visual style as build_neal_street_week_message (bold header, divider,
     day section, real @mentions, "See Full Schedule" button) but for the
     single-day 9am same-day digest."""
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
     day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
-    return _build_single_day_neal_street_message("*Here's who's at Neal Street today*", day_header, names, directory)
+    return _build_single_day_neal_street_message("*Here's who's at Neal Street today*", day_header, day_rows, directory)
 
 
-def build_neal_street_tomorrow_message(date_str: str, names: list[str], directory: dict | None = None) -> dict:
+def build_neal_street_tomorrow_message(date_str: str, day_rows: list, directory: dict | None = None) -> dict:
     """Same visual style as build_neal_street_week_message but for the single-day
     4pm heads-up."""
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     weekday_name = WEEKDAY_NAMES[date_obj.weekday()][:3]
     day_header = f"{weekday_name} {_ordinal_day(date_obj.day)}"
     greeting = ":wave: Good afternoon everyone! Here's who will be at Neal Street tomorrow :point_down:"
-    return _build_single_day_neal_street_message(greeting, day_header, names, directory)
+    return _build_single_day_neal_street_message(greeting, day_header, day_rows, directory)

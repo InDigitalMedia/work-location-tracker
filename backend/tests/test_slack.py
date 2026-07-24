@@ -281,25 +281,57 @@ def test_extract_day_state_resolves_custom_client_text():
 # --- slack_views.format_week_summary ------------------------------------------
 
 class _Row:
-    def __init__(self, date, location, user_name):
-        self.date, self.location, self.user_name = date, location, user_name
+    def __init__(self, date, location, user_name, client=None):
+        self.date, self.location, self.user_name, self.client = date, location, user_name, client
 
 
-def test_build_neal_street_week_message_filters_to_neal_street_only():
-    """Non-Neal-Street entries (WFH, Client Office, etc.) shouldn't appear at
-    all -- this summary is deliberately scoped to "who's in the office"."""
+def test_format_location_groups_shows_neal_street_and_client_office_on_separate_lines():
+    day_rows = [
+        _Row("2026-07-27", "Neal Street", "Alice"),
+        _Row("2026-07-27", "Client Office", "Bob", client="Sky"),
+        _Row("2026-07-27", "Client Office", "Carol", client="FT"),
+        _Row("2026-07-27", "WFH", "Dave"),
+    ]
+
+    text = slack_views._format_location_groups(day_rows, {})
+    lines = text.split("\n")
+
+    assert "🏢 *Neal Street*" in lines
+    assert "@Alice" in lines
+    assert "💼 *Client Office*" in lines
+    assert "Sky: @Bob" in lines
+    assert "FT: @Carol" in lines
+    assert "Dave" not in text
+
+
+def test_format_location_groups_omits_empty_sections():
+    only_client_office = [_Row("2026-07-27", "Client Office", "Bob", client="Sky")]
+    text = slack_views._format_location_groups(only_client_office, {})
+    assert "Neal Street" not in text
+    assert "Sky: @Bob" in text
+
+
+def test_format_location_groups_shows_placeholder_when_nobody_in_the_office():
+    assert slack_views._format_location_groups([], {}) == "_No one in the office_"
+
+
+def test_build_neal_street_week_message_includes_neal_street_and_client_office_only():
+    """Neal Street and Client Office both appear (the "who's in an office"
+    question people actually ask) -- other locations (WFH, Holiday, etc.)
+    don't."""
     week_entries = [
         _Row("2026-07-27", "Neal Street", "Alice"),
         _Row("2026-07-27", "Neal Street", "Bob"),
         _Row("2026-07-27", "WFH", "Carol"),
-        _Row("2026-07-29", "Client Office", "Dave"),
+        _Row("2026-07-29", "Client Office", "Dave", client="Sky"),
     ]
 
     message = slack_views.build_neal_street_week_message(week_entries, "2026-07-27")
     blocks_text = json.dumps(message["blocks"])
 
     assert "Alice" in blocks_text and "Bob" in blocks_text
-    assert "Carol" not in blocks_text and "Dave" not in blocks_text
+    assert "Carol" not in blocks_text
+    assert "Dave" in blocks_text and "Sky" in blocks_text
 
 
 def test_build_neal_street_week_message_has_a_divider_and_section_per_day():
@@ -308,7 +340,7 @@ def test_build_neal_street_week_message_has_a_divider_and_section_per_day():
 
     day_sections = [b for b in blocks if b["type"] == "section" and "Mon" in b.get("text", {}).get("text", "")]
     assert len(day_sections) == 1
-    assert "No one going" in day_sections[0]["text"]["text"]
+    assert "No one in the office" in day_sections[0]["text"]["text"]
 
     dividers = [b for b in blocks if b["type"] == "divider"]
     assert len(dividers) == 6  # one before each of the 5 days, one before the button
@@ -369,9 +401,11 @@ def test_build_neal_street_tomorrow_message_has_friendly_header():
 
 def test_build_neal_street_tomorrow_message_shows_day_and_mentions():
     directory = {"alice johnson": {"id": "U001", "real_name": "Alice Johnson"}}
-    message = slack_views.build_neal_street_tomorrow_message(
-        "2026-07-29", ["Alice Johnson", "Ghost Person"], directory
-    )
+    day_rows = [
+        _Row("2026-07-29", "Neal Street", "Alice Johnson"),
+        _Row("2026-07-29", "Neal Street", "Ghost Person"),
+    ]
+    message = slack_views.build_neal_street_tomorrow_message("2026-07-29", day_rows, directory)
     blocks_text = json.dumps(message["blocks"])
 
     assert "Wed 29" in blocks_text
@@ -410,14 +444,31 @@ def test_build_neal_street_today_message_has_bold_header_matching_week_summary_s
 
 def test_build_neal_street_today_message_shows_day_and_mentions():
     directory = {"alice johnson": {"id": "U001", "real_name": "Alice Johnson"}}
-    message = slack_views.build_neal_street_today_message(
-        "2026-07-29", ["Alice Johnson", "Ghost Person"], directory
-    )
+    day_rows = [
+        _Row("2026-07-29", "Neal Street", "Alice Johnson"),
+        _Row("2026-07-29", "Neal Street", "Ghost Person"),
+    ]
+    message = slack_views.build_neal_street_today_message("2026-07-29", day_rows, directory)
     blocks_text = json.dumps(message["blocks"])
 
     assert "Wed 29" in blocks_text
     assert "<@U001>" in blocks_text
     assert "@Ghost Person" in blocks_text
+
+
+def test_build_neal_street_today_message_shows_client_office_grouped_by_client():
+    day_rows = [
+        _Row("2026-07-29", "Neal Street", "Alice"),
+        _Row("2026-07-29", "Client Office", "Bob", client="Sky"),
+        _Row("2026-07-29", "Client Office", "Carol", client="FT"),
+    ]
+    message = slack_views.build_neal_street_today_message("2026-07-29", day_rows)
+    day_text = message["blocks"][2]["text"]["text"]
+
+    assert "Neal Street" in day_text and "@Alice" in day_text
+    assert "Client Office" in day_text
+    assert "Sky: @Bob" in day_text
+    assert "FT: @Carol" in day_text
 
 
 def test_build_neal_street_today_message_ends_with_full_schedule_button():
