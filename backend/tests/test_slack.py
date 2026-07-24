@@ -352,6 +352,13 @@ def test_build_neal_street_week_message_shows_every_name_no_truncation():
         assert f"@{name}" in blocks_text
 
 
+def test_build_neal_street_week_message_custom_header_overrides_default():
+    message = slack_views.build_neal_street_week_message([], "2026-07-27", header_text="Here's who's at Neal Street next week")
+
+    assert message["blocks"][0]["text"]["text"] == "*Here's who's at Neal Street next week*"
+    assert message["text"] == "Here's who's at Neal Street next week"
+
+
 def test_build_neal_street_tomorrow_message_has_friendly_header():
     message = slack_views.build_neal_street_tomorrow_message("2026-07-29", [])
     header_text = message["blocks"][0]["text"]["text"]
@@ -766,10 +773,15 @@ def test_tomorrow_digest_gate_skips_off_hour(monkeypatch):
     assert result["hour"] == 14
 
 
-def test_tomorrow_digest_gate_skips_when_tomorrow_is_weekend(monkeypatch):
+def test_tomorrow_digest_posts_next_week_on_friday_instead_of_skipping(monkeypatch):
+    """Friday's "tomorrow" would be Saturday (not useful) -- instead of
+    skipping, this posts the whole of next week's schedule as one action."""
+    monkeypatch.setattr(daily_notifications.queries, "get_week_entries", lambda session, week_start: [])
     friday_4pm = datetime(2026, 7, 31, 16, 0, tzinfo=ZoneInfo("Europe/London"))  # a Friday
     result = _run_tomorrow_digest_with_fixed_now(monkeypatch, friday_4pm)
-    assert result == {"ok": True, "skipped": "tomorrow is a weekend"}
+    assert "skipped" not in result
+    assert result["ok"] is True
+    assert result["period"] == "next_week"
 
 
 def test_tomorrow_digest_gate_passes_on_a_weekday_afternoon(monkeypatch):
@@ -777,6 +789,7 @@ def test_tomorrow_digest_gate_passes_on_a_weekday_afternoon(monkeypatch):
     result = _run_tomorrow_digest_with_fixed_now(monkeypatch, tuesday_4pm)
     assert "skipped" not in result
     assert result["ok"] is True
+    assert result["period"] == "tomorrow"
 
 
 def test_tomorrow_digest_force_bypasses_gate(monkeypatch):
@@ -790,6 +803,31 @@ def test_tomorrow_digest_force_bypasses_gate(monkeypatch):
     result = daily_notifications.run_tomorrow_digest(session=None, force=True)
     assert "skipped" not in result
     assert result["ok"] is True
+
+
+def test_post_neal_street_next_week_digest_uses_next_week_header(monkeypatch):
+    monkeypatch.setattr(daily_notifications, "_resolve_digest_channel", lambda directory: "C0GENERAL")
+    monkeypatch.setattr(daily_notifications.slack_directory, "build_directory", lambda: {})
+    monkeypatch.setattr(
+        daily_notifications.queries,
+        "get_week_entries",
+        lambda session, week_start: [_Row("2026-08-03", "Neal Street", "Alice")],
+    )
+
+    captured = {}
+
+    def _fake_post_message(channel, text, blocks=None):
+        captured["channel"] = channel
+        captured["text"] = text
+        captured["blocks"] = blocks
+
+    monkeypatch.setattr(daily_notifications.slack_client, "post_message", _fake_post_message)
+
+    count = daily_notifications._post_neal_street_next_week_digest(session=None, next_week_start="2026-08-03")
+
+    assert count == 1
+    assert captured["channel"] == "C0GENERAL"
+    assert captured["blocks"][0]["text"]["text"] == "*Here's who's at Neal Street next week*"
 
 
 # --- daily_notifications next-week-reminder gate ------------------------------
