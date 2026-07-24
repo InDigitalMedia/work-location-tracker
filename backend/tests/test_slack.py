@@ -299,8 +299,8 @@ def test_format_location_groups_shows_neal_street_and_client_office_on_separate_
     assert "🏢 *Neal Street (1)*" in lines
     assert "@Alice" in lines
     assert "💼 *Client Office (2)*" in lines
-    assert "Sky: @Bob" in lines
-    assert "FT: @Carol" in lines
+    assert "*Sky*: @Bob" in lines
+    assert "*FT*: @Carol" in lines
     assert "Dave" not in text
 
 
@@ -323,7 +323,7 @@ def test_format_location_groups_omits_empty_sections():
     only_client_office = [_Row("2026-07-27", "Client Office", "Bob", client="Sky")]
     text = slack_views._format_location_groups(only_client_office, {})
     assert "Neal Street" not in text
-    assert "Sky: @Bob" in text
+    assert "*Sky*: @Bob" in text
 
 
 def test_format_location_groups_shows_placeholder_when_nobody_in_the_office():
@@ -482,8 +482,8 @@ def test_build_neal_street_today_message_shows_client_office_grouped_by_client()
 
     assert "Neal Street" in day_text and "@Alice" in day_text
     assert "Client Office" in day_text
-    assert "Sky: @Bob" in day_text
-    assert "FT: @Carol" in day_text
+    assert "*Sky*: @Bob" in day_text
+    assert "*FT*: @Carol" in day_text
 
 
 def test_build_neal_street_today_message_ends_with_full_schedule_button():

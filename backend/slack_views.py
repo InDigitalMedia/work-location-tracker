@@ -374,7 +374,7 @@ def _format_location_groups(day_rows: list, directory: dict) -> str:
         for row in client_rows:
             by_client.setdefault(row.client or "No Client", []).append(row.user_name)
         client_lines = "\n".join(
-            f"{client}: {_format_names(names, directory)}" for client, names in sorted(by_client.items())
+            f"*{client}*: {_format_names(names, directory)}" for client, names in sorted(by_client.items())
         )
         sections.append(f"💼 *Client Office ({count})*\n{client_lines}")
 
