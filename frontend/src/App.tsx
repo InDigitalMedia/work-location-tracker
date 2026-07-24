@@ -1878,8 +1878,12 @@ function App() {
                   // Compute attendance stats for this day
                   const dayAllEntries = groupedEntries[date] ? Object.values(groupedEntries[date]).flat() : []
                   const enteredUsers = new Set(dayAllEntries.map(e => e.user_name))
-                  const officeCount = new Set(dayAllEntries.filter(e => e.location === 'Neal Street').map(e => e.user_name)).size
+                  const nealStreetCount = new Set(dayAllEntries.filter(e => e.location === 'Neal Street').map(e => e.user_name)).size
+                  const clientOfficeCount = new Set(dayAllEntries.filter(e => e.location === 'Client Office').map(e => e.user_name)).size
                   const wfhCount = new Set(dayAllEntries.filter(e => e.location === 'WFH').map(e => e.user_name)).size
+                  const workingFromAbroadCount = new Set(dayAllEntries.filter(e => e.location === 'Working From Abroad').map(e => e.user_name)).size
+                  const holidayCount = new Set(dayAllEntries.filter(e => e.location === 'Holiday').map(e => e.user_name)).size
+                  const otherCount = new Set(dayAllEntries.filter(e => e.location === 'Other').map(e => e.user_name)).size
                   const notEnteredCount = allUsers.length - enteredUsers.size
 
                   return (
@@ -1900,9 +1904,17 @@ function App() {
 
                     {/* Attendance summary bar */}
                     <div className="attendance-bar">
-                      <span>🏢 {officeCount} in office</span>
+                      <span>🏢 {nealStreetCount} Neal Street</span>
+                      <span className="attendance-dot">·</span>
+                      <span>💼 {clientOfficeCount} Client Office</span>
                       <span className="attendance-dot">·</span>
                       <span>🏠 {wfhCount} WFH</span>
+                      <span className="attendance-dot">·</span>
+                      <span>✈️ {workingFromAbroadCount} Working From Abroad</span>
+                      <span className="attendance-dot">·</span>
+                      <span>🌴 {holidayCount} Holiday</span>
+                      <span className="attendance-dot">·</span>
+                      <span>📝 {otherCount} Other</span>
                       <span className="attendance-dot">·</span>
                       <span>❓ {notEnteredCount} not entered</span>
                     </div>
